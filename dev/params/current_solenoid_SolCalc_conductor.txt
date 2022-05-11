@@ -1,0 +1,2 @@
+h_cable [mm],w_cable [mm],h_sc [mm],w_sc [mm],t_gi [mm],t_ci [mm],t_il [mm],phi0 [deg],phi1 [deg]
+5,10000.,5,10000.,0.,0.,0,0.,360.
