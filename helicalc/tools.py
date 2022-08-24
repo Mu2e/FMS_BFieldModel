@@ -2,6 +2,7 @@ import subprocess
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from collections.abc import Iterable
 
 def get_gpu_memory_map():
     """Get the current gpu usage.
@@ -40,6 +41,28 @@ def generate_cartesian_grid_df(grid_dict, dec_round=3):
     X = X.flatten()
     Y = Y.flatten()
     Z = Z.flatten()
+    df = pd.DataFrame({'X':X, 'Y':Y, 'Z':Z})
+
+    return df
+
+# create grid (cylindrical)
+def generate_cylindrical_grid_df(grid_dict, dec_round=3):
+    # Note R may not be equally spaced. Allow passing in a list of R values
+    # to R0. In this case nR and dR are meaningless.
+    g = grid_dict
+    edges = [np.round(np.linspace(g[f'{i}0'], g[f'{i}0']+(g[f'n{i}']-1)*g[f'd{i}'], g[f'n{i}']), decimals=dec_round)
+             for i in ['Phi', 'Z']]
+    if isinstance(g['R0'], Iterable):
+        edges.insert(0, g['R0'])
+    else:
+        edges.insert(0, np.round(np.linspace(g['R0'], g['R0']+(g['nR']-1)*g['dR'], g['nR']), decimals=dec_round))
+    R, Phi, Z = np.meshgrid(*edges, indexing='ij')
+    R = R.flatten()
+    Phi = Phi.flatten()
+    Z = Z.flatten()
+    # transform to X, Y, Z
+    X = R * np.cos(Phi)
+    Y = R * np.sin(Phi)
     df = pd.DataFrame({'X':X, 'Y':Y, 'Z':Z})
 
     return df

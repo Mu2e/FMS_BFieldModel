@@ -7,7 +7,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', '--Region',
                         help='Which region of Mu2e to calculate? '+
-                        '["DS"(default), "TSd"]')
+                        '["DS"(default), "TSd", "DSCylFMS"]')
     parser.add_argument('-D', '--Device',
                         help='Which GPU (i.e. which coils/layers) to use? [0 (default), 1, 2, 3].')
     parser.add_argument('-t', '--Testing',

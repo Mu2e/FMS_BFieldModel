@@ -7,8 +7,8 @@ import argparse
 from tqdm import tqdm
 from helicalc import helicalc_dir, helicalc_data
 from helicalc.busbar import StraightIntegrator3D
-from helicalc.tools import generate_cartesian_grid_df
-from helicalc.constants import dxyz_straight_bar_dict, TSd_grid, DS_grid
+from helicalc.tools import generate_cartesian_grid_df, generate_cylindrical_grid_df
+from helicalc.constants import dxyz_straight_bar_dict, TSd_grid, DS_grid, DS_FMS_cyl_grid
 from helicalc.solenoid_geom_funcs import load_all_geoms
 
 # data
@@ -21,14 +21,14 @@ df_str = df_dict['straights']
 # assume same chunk size for everything, for now
 N_per_chunk = 10000
 
-regions = {'TSd': TSd_grid, 'DS': DS_grid,}
+regions = {'TSd': TSd_grid, 'DS': DS_grid, 'DSCylFMS': DS_FMS_cyl_grid}
 
 if __name__=='__main__':
     # parse command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', '--Region',
                         help='Which region of Mu2e to calculate? '+
-                        '["DS"(default), "TSd"]')
+                        '["DS"(default), "TSd", "DSCylFMS"]')
     parser.add_argument('-C', '--Conductor',
                         help='Conductor number [12, 25-67], default is 12 '+
                         '(from Gap DS7-8 to over DS-2).')
@@ -79,8 +79,11 @@ if __name__=='__main__':
     sys.stdout = log_file
     # find correct chunk size
     N_calc = N_per_chunk
-    # set up grid
-    df = generate_cartesian_grid_df(regions[reg])
+    # create grid
+    if reg in ['DSCylFMS']:
+        df = generate_cylindrical_grid_df(regions[reg])
+    else:
+        df = generate_cartesian_grid_df(regions[reg])
     if args.Testing:
         df = df.iloc[:100000].copy()
     # initialize conductor

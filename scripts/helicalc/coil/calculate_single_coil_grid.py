@@ -8,8 +8,8 @@ from tqdm import tqdm
 from helicalc import helicalc_dir, helicalc_data
 from helicalc.coil import CoilIntegrator
 from helicalc.geometry import read_solenoid_geom_combined
-from helicalc.tools import generate_cartesian_grid_df
-from helicalc.constants import dxyz_dict, TSd_grid, DS_grid
+from helicalc.tools import generate_cartesian_grid_df, generate_cylindrical_grid_df
+from helicalc.constants import dxyz_dict, TSd_grid, DS_grid, DS_FMS_cyl_grid
 
 # data
 datadir = helicalc_data+'Bmaps/helicalc_partial/'
@@ -23,14 +23,14 @@ geom_df = read_solenoid_geom_combined(paramdir,paramname).iloc[55:].copy()
 chunk_file = helicalc_data+'Bmaps/aux/batch_N_helicalc_03-16-22.txt'
 df_chunks = pd.read_csv(chunk_file)
 
-regions = {'TSd': TSd_grid, 'DS': DS_grid,}
+regions = {'TSd': TSd_grid, 'DS': DS_grid, 'DSCylFMS': DS_FMS_cyl_grid}
 
 if __name__=='__main__':
     # parse command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', '--Region',
                         help='Which region of Mu2e to calculate? '+
-                        '["DS"(default), "TSd"]')
+                        '["DS"(default), "TSd", "DSCylFMS"]')
     parser.add_argument('-C', '--Coil',
                         help='Coil number [56-66], default is 56 (DS-1).')
     parser.add_argument('-L', '--Layer',
@@ -82,8 +82,11 @@ if __name__=='__main__':
     sys.stdout = log_file
     # find correct chunk size
     N_calc = df_chunks.query(f'Nt_Ri == {df_coil.Nt_Ri}').iloc[0].N_field_points
-    # set up grid
-    df = generate_cartesian_grid_df(regions[reg])
+    # create grid
+    if reg in ['DSCylFMS']:
+        df = generate_cylindrical_grid_df(regions[reg])
+    else:
+        df = generate_cartesian_grid_df(regions[reg])
     if args.Testing:
         df = df.iloc[:1000].copy()
     #df_ = df.iloc[:10000]

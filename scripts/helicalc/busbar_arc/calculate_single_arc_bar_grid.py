@@ -7,8 +7,8 @@ import argparse
 from tqdm import tqdm
 from helicalc import helicalc_dir, helicalc_data
 from helicalc.busbar import ArcIntegrator3D
-from helicalc.tools import generate_cartesian_grid_df
-from helicalc.constants import dxyz_arc_bar_dict, TSd_grid, DS_grid
+from helicalc.tools import generate_cartesian_grid_df, generate_cylindrical_grid_df
+from helicalc.constants import dxyz_arc_bar_dict, TSd_grid, DS_grid, DS_FMS_cyl_grid
 from helicalc.solenoid_geom_funcs import load_all_geoms
 
 # data
@@ -24,14 +24,14 @@ df_arc_transfer = df_dict['arcs_transfer']
 # N_per_chunk = 1500 # still have issues
 N_per_chunk = 1250
 
-regions = {'TSd': TSd_grid, 'DS': DS_grid,}
+regions = {'TSd': TSd_grid, 'DS': DS_grid, 'DSCylFMS': DS_FMS_cyl_grid}
 
 if __name__=='__main__':
     # parse command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', '--Region',
                         help='Which region of Mu2e to calculate? '+
-                        '["DS"(default), "TSd"]')
+                        '["DS"(default), "TSd", "DSCylFMS"]')
     parser.add_argument('-C', '--Conductor',
                         help='Conductor number [1-11, 13-24, 68-71], default '+
                         'is 1 (connector to DS-1 lead).')
@@ -93,8 +93,11 @@ if __name__=='__main__':
     sys.stdout = log_file
     # find correct chunk size
     N_calc = N_per_chunk
-    # set up grid
-    df = generate_cartesian_grid_df(regions[reg])
+    # create grid
+    if reg in ['DSCylFMS']:
+        df = generate_cylindrical_grid_df(regions[reg])
+    else:
+        df = generate_cartesian_grid_df(regions[reg])
     if args.Testing:
         df = df.iloc[:10000].copy()
     # initialize conductor
