@@ -15,7 +15,7 @@ from helicalc.solenoid_geom_funcs import load_all_geoms
 datadir = helicalc_data+'Bmaps/helicalc_partial/'
 
 # load straight bus bars, dump all other geometries
-df_dict = load_all_geoms(return_dict=True)
+df_dict = load_all_geoms(version=13, return_dict=True)
 df_str = df_dict['straights']
 
 # assume same chunk size for everything, for now

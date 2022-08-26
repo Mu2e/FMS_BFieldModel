@@ -61,7 +61,7 @@ def generate_cylindrical_grid_df(grid_dict, dec_round=3):
     Phi = Phi.flatten()
     Z = Z.flatten()
     # transform to X, Y, Z
-    X = R * np.cos(Phi)
+    X = R * np.cos(Phi) + g['XOffset']
     Y = R * np.sin(Phi)
     df = pd.DataFrame({'X':X, 'Y':Y, 'Z':Z})
 

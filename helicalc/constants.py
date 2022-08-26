@@ -35,7 +35,8 @@ DS_grid = {'X0':-5.096, 'Y0':-1.200, 'Z0':3.071,
 Rs_BP = [0.044, 0.319, 0.488, 0.656, 0.800]
 DS_FMS_cyl_grid = {'R0': Rs_BP, 'Phi0': 0., 'Z0': 4.221,
                    'nR': None, 'nPhi': 16, 'nZ': 194,
-                   'dR': None, 'dPhi': 2*np.pi/16, 'dZ':0.05}
+                   'dR': None, 'dPhi': 2*np.pi/16, 'dZ':0.05,
+                   'XOffset': -3.904}
 
 # additions outside solenoid regions
 # note that for now we do not do "flipy", so should include Y<0 in grid
