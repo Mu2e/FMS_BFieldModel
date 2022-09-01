@@ -168,6 +168,9 @@ class StraightIntegrator3D(object):
             else:
                 if f'bus_str_cn_{i}' in col:
                     cols.append(col)
+        # check for Hall probe label
+        if "HP" in self.df.columns:
+            cols.append("HP")
         # save
         df_to_save = self.df[cols]
         if savetype == 'pkl':
@@ -337,6 +340,9 @@ class ArcIntegrator3D(object):
             else:
                 if f'bus_arc_cn_{i}' in col:
                     cols.append(col)
+        # check for Hall probe label
+        if "HP" in self.df.columns:
+            cols.append("HP")
         # save
         df_to_save = self.df[cols]
         if savetype == 'pkl':

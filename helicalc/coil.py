@@ -364,6 +364,9 @@ class CoilIntegrator(object):
             else:
                 if f'helicalc_c{i}_l{self.layer}' in col:
                     cols.append(col)
+        # check for Hall probe label
+        if "HP" in self.df.columns:
+            cols.append("HP")
         # save
         df_to_save = self.df[cols]
         if savetype == 'pkl':
