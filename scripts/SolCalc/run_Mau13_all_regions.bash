@@ -16,7 +16,9 @@ conda activate helicalc
 # python calculate_Mau13_single_region.py -r PStoDumpArea -t n
 # run ProtonDumpArea
 # python calculate_Mau13_single_region.py -r ProtonDumpArea -t n
-# run DSCylFMS
-python calculate_Mau13_single_region.py -r DSCylFMS -t n
+# run DSCylFMS (BP)
+#python calculate_Mau13_single_region.py -r DSCylFMS -t n
+# run DSCylFMSAll (BP+SP)
+python calculate_Mau13_single_region.py -r DSCylFMSAll -t n
 
 # read -p "Press any key to resume ..."

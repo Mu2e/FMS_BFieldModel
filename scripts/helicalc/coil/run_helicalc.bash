@@ -8,7 +8,8 @@ logdir="/home/shared_data/Bmaps/helicalc_partial/logs/"
 
 # region="DS"
 # region="TSd"
-region="DSCylFMS"
+# region="DSCylFMS"
+region="DSCylFMSAll"
 
 test="n"
 # test="y"

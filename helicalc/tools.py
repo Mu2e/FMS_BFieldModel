@@ -49,22 +49,33 @@ def generate_cartesian_grid_df(grid_dict, dec_round=3):
 def generate_cylindrical_grid_df(grid_dict, dec_round=3):
     # Note R may not be equally spaced. Allow passing in a list of R values
     # to R0. In this case nR and dR are meaningless.
-    g = grid_dict
-    edges = [np.round(np.linspace(g[f'{i}0'], g[f'{i}0']+(g[f'n{i}']-1)*g[f'd{i}'], g[f'n{i}']), decimals=dec_round)
-             for i in ['Phi', 'Z']]
-    if isinstance(g['R0'], Iterable):
-        edges.insert(0, g['R0'])
-    else:
-        edges.insert(0, np.round(np.linspace(g['R0'], g['R0']+(g['nR']-1)*g['dR'], g['nR']), decimals=dec_round))
-    R, Phi, Z = np.meshgrid(*edges, indexing='ij')
-    R = R.flatten()
-    Phi = Phi.flatten()
-    Z = Z.flatten()
-    # transform to X, Y, Z
-    X = R * np.cos(Phi) + g['XOffset']
-    Y = R * np.sin(Phi)
-    df = pd.DataFrame({'X':X, 'Y':Y, 'Z':Z})
-
+    if type(grid_dict) is not list:
+        grid_dict = [grid_dict]
+    #g = grid_dict
+    df = []
+    for g in grid_dict:
+        edges = [np.round(np.linspace(g[f'{i}0'], g[f'{i}0']+(g[f'n{i}']-1)*g[f'd{i}'], g[f'n{i}']), decimals=dec_round)
+                 for i in ['Phi', 'Z']]
+        if isinstance(g['R0'], Iterable):
+            edges.insert(0, g['R0'])
+        else:
+            edges.insert(0, np.round(np.linspace(g['R0'], g['R0']+(g['nR']-1)*g['dR'], g['nR']), decimals=dec_round))
+        R, Phi, Z = np.meshgrid(*edges, indexing='ij')
+        R = R.flatten()
+        Phi = Phi.flatten()
+        Z = Z.flatten()
+        # transform to X, Y, Z
+        X = R * np.cos(Phi) + g['XOffset']
+        Y = R * np.sin(Phi)
+        if "HP_labels" in g.keys():
+            label_map = {r: l for r,l in zip(g['R0'], g['HP_labels'])}
+            # map probe name onto radius values
+            hp_labs = np.vectorize(label_map.get)(R)
+            df_ = pd.DataFrame({'X':X, 'Y':Y, 'Z':Z, 'HP': hp_labs})
+        else:
+            df_ = pd.DataFrame({'X':X, 'Y':Y, 'Z':Z})
+        df.append(df_)
+    df = pd.concat(df)
     return df
 
 # # create grid (2D, with cylindrical symmetry

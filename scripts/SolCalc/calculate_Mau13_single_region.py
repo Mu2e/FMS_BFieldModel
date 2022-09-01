@@ -15,7 +15,8 @@ from helicalc.constants import (
     PStoDumpArea_grid,
     ProtonDumpArea_grid,
     DS_cyl2d_grid_5mm,
-    DS_FMS_cyl_grid
+    DS_FMS_cyl_grid,
+    DS_FMS_cyl_grid_SP,
 )
 
 # paramdir = '/home/ckampa/coding/helicalc/dev/params/'
@@ -27,7 +28,8 @@ regions = {'PS': PS_grid, 'TSu': TSu_grid, 'TSd': TSd_grid, 'DS': DS_grid,
            'PStoDumpArea': PStoDumpArea_grid,
            'ProtonDumpArea': ProtonDumpArea_grid,
            'DSCyl2D': DS_cyl2d_grid_5mm,
-           'DSCylFMS': DS_FMS_cyl_grid}
+           'DSCylFMS': DS_FMS_cyl_grid,
+           'DSCylFMSAll': [DS_FMS_cyl_grid, DS_FMS_cyl_grid_SP]}
 
 if __name__=='__main__':
     # parse command line arguments
@@ -35,7 +37,7 @@ if __name__=='__main__':
     parser.add_argument('-r', '--Region',
                         help='Which region of Mu2e to calculate? '+
                         '["PS"(default), "TSu", "TSd", "DS", "PStoDumpArea"'+
-                        ', "ProtonDumpArea", "DSCyl2D", "DSCylFMS"]')
+                        ', "ProtonDumpArea", "DSCyl2D", "DSCylFMS", "DSCylFMSAll"]')
     parser.add_argument('-t', '--Testing',
                         help='Calculate using small subset of coils?'+
                         '"y"(default)/"n"')
@@ -66,7 +68,7 @@ if __name__=='__main__':
     # step size for integrator
     drz = np.array([5e-3, 1e-2])
     # create grid
-    if reg in ['DSCylFMS']:
+    if reg in ['DSCylFMS', 'DSCylFMSAll']:
         df = generate_cylindrical_grid_df(regions[reg])
     else:
         df = generate_cartesian_grid_df(regions[reg])
