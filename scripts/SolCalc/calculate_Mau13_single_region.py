@@ -69,7 +69,7 @@ if __name__=='__main__':
     drz = np.array([5e-3, 1e-2])
     # create grid
     if reg in ['DSCylFMS', 'DSCylFMSAll']:
-        df = generate_cylindrical_grid_df(regions[reg])
+        df = generate_cylindrical_grid_df(regions[reg], dec_round=9)
     else:
         df = generate_cartesian_grid_df(regions[reg])
     # define base save name

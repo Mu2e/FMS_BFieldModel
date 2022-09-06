@@ -85,7 +85,7 @@ if __name__=='__main__':
     N_calc = df_chunks.query(f'Nt_Ri == {df_coil.Nt_Ri}').iloc[0].N_field_points
     # create grid
     if reg in ['DSCylFMS', 'DSCylFMSAll']:
-        df = generate_cylindrical_grid_df(regions[reg])
+        df = generate_cylindrical_grid_df(regions[reg], dec_round=9)
     else:
         df = generate_cartesian_grid_df(regions[reg])
     if args.Testing:
