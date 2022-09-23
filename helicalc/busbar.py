@@ -53,7 +53,8 @@ class StraightIntegrator3D(object):
             self.zps = lib.linspace(0, self.L, abs(int(self.L/self.dxyz[2] + 1)))
         self.XP, self.YP, self.ZP = lib.meshgrid(self.xps, self.yps, self.zps, indexing='ij')
         # rotation
-        self.euler2 = geom_df[['Phi2', 'theta2', 'psi2']].values
+        # self.euler2 = geom_df[['Phi2', 'theta2', 'psi2']].values
+        self.euler2 = np.array([geom_df.Phi2, geom_df.theta2, geom_df.psi2])
         self.rot = Rotation.from_euler('zyz', self.euler2[::-1], degrees=True)
         self.inv_rot = self.rot.inv()
 
@@ -226,7 +227,8 @@ class ArcIntegrator3D(object):
         self.COSPHI = lib.cos(self.PHI)
         self.RHOP = self.rho - self.YP
         # rotations
-        self.euler2 = geom_df[['Phi2', 'theta2', 'psi2']].values
+        # self.euler2 = geom_df[['Phi2', 'theta2', 'psi2']].values
+        self.euler2 = np.array([geom_df.Phi2, geom_df.theta2, geom_df.psi2])
         self.rot = Rotation.from_euler('zyz', self.euler2[::-1], degrees=True)
         self.inv_rot = self.rot.inv()
 

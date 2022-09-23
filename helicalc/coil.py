@@ -121,7 +121,8 @@ class CoilIntegrator(object):
         self.lib = lib
         self.dev = dev
         # rotation function
-        self.XYZ_rot = geom_coil[[f'rot{i:d}' for i in [0,1,2]]].values
+        # self.XYZ_rot = geom_coil[[f'rot{i:d}' for i in [0,1,2]]].values
+        self.XYZ_rot = np.array([geom_coil[f'rot{i:d}'] for i in [0,1,2]])
         self.XYZ_rot_rad = np.radians(self.XYZ_rot)
         self.mu2e_to_coil = Rotation.from_euler('XYZ', -self.XYZ_rot_rad)
         self.coil_to_mu2e = self.mu2e_to_coil.inv()
