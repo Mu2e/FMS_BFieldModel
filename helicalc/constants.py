@@ -102,3 +102,6 @@ dxyz_straight_bar_dict = {1: np.array([1e-3,3e-3, 5e-3]),
 # dz (dphi) assumes R=1. Adjust this when using if this is not the case.
 dxyz_arc_bar_dict = {1: np.array([1e-3,3e-3, 5e-3]),
                      2: np.array([1e-3,2e-3, 5e-3])}
+
+## RADIAL 1D
+dr_radial_dict = {1: 1e-3}

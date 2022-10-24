@@ -10,6 +10,10 @@ def trapz_3d(xs, ys, zs, integrand_xyz, int_func=tc.trapz):
 def trapz_2d(rs, zs, integrand_rz, int_func=tc.trapz):
     return int_func(int_func(integrand_rz, axis=-1, x=zs), axis=-1, x=rs)
 
+# 1D needed for auxiliary_integrators.RadialStraightIntegrator1D
+def trapz_1d(rs, integrand_r, int_func=np.trapz):
+    return int_func(integrand_r, axis=-1, x=rs)
+
 # helpful functions
 # maybe move into CoilIntegrator class? FIXME!
 ## HELIX
@@ -106,3 +110,19 @@ def straight_integrand_Bx(RX, RY, R2_32):
     return -RY/R2_32
 def straight_integrand_By(RX, RY, R2_32):
     return RX/R2_32
+
+####
+
+## RADIAL STRAIGHT INTEGRATOR (1D)
+def rx_r1d(rho, COSPHIC, x):
+    return x - rho*COSPHIC
+def ry_r1d(rho, SINPHIC, y):
+    return y - rho*SINPHIC
+def rz_r1d(rho, zc, z):
+    return z - zc
+
+def radial_integrand_Bphi(RPHI, RZ, R2_32):
+    return -RZ/R2_32
+
+def radial_integrand_Bz(RPHI, RZ, R2_32):
+    return RPHI/R2_32
