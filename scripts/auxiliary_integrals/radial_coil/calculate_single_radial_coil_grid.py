@@ -12,7 +12,7 @@ from helicalc.constants import dr_radial_dict, TSd_grid, DS_grid, DS_FMS_cyl_gri
 from helicalc.solenoid_geom_funcs import load_all_geoms
 
 # data
-datadir = helicalc_data+'Bmaps/helicalc_partial/'
+datadir = helicalc_data+'Bmaps/auxiliary_partial/'
 
 # load straight bus bars, dump all other geometries
 df_dict = load_all_geoms(version=13, return_dict=True)
@@ -34,6 +34,9 @@ if __name__=='__main__':
     parser.add_argument('-C', '--Coil',
                         help='Coil number [56(default), 57, 58, ... , 66]. '+
                         'This is supported only for DS coils.')
+    parser.add_argument('-R', '--Reverse',
+                        help='Reverse "I_flow" for radial bars? '+
+                        '"y"/"n"(default). Useful e.g. for bus bars.')
     parser.add_argument('-D', '--Device',
                         help='Which GPU to use? [0 (default), 1, 2, 3].')
     parser.add_argument('-t', '--Testing',
@@ -50,7 +53,19 @@ if __name__=='__main__':
         args.Coil = "56"
     else:
         args.Coil = args.Coil.strip()
-    df_conds = df_radial_coils[np.isin(df_radial_coils, [f'{args.Coil}in', f'{args.Coil}out'])]
+    if args.Reverse is None:
+        args.Reverse = False
+    else:
+        args.Reverse = args.Reverse.strip() == 'y'
+    df_conds = df_radial_coils[np.isin(df_radial_coils,
+                                       [f'{args.Coil}in', f'{args.Coil}out'])\
+                               ].copy()
+    # reverse if necessary
+    if args.Reverse:
+        df_conds.loc[:, 'I_flow'] = -1 * df_conds.loc[:, 'I_flow']
+        rev_str = '_reversed'
+    else:
+        rev_str = ''
     # pick correct integration grid based on ???
     ind_dr = 1
     dr_ = dr_radial_dict[ind_dr]
@@ -74,7 +89,7 @@ if __name__=='__main__':
     # redirect stdout to log file
     dt = datetime.strftime(datetime.now(), '%Y-%m-%d_%H%M%S')
     log_file = open(datadir+f"logs/{dt}_calculate_{reg}_"+
-                    "region_radial_coil.log", "w")
+                    f"region_radial_coil{rev_str}.log", "w")
     old_stdout = sys.stdout
     sys.stdout = log_file
     # find correct chunk size
@@ -94,5 +109,5 @@ if __name__=='__main__':
         df = myRadial.integrate_grid(df, N_batch=N_calc, tqdm=tqdm)
     # save!
     myRadial.save_grid_calc(savetype='pkl', savename=base_name+
-                            f'Coil_Num_{args.Coil}_radial',
+                            f'Coil_Num_{args.Coil}_radial{rev_str}',
                             all_cols=True)
