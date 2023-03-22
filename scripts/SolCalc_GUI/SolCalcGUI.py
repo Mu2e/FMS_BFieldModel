@@ -39,8 +39,8 @@ cols_stat = ['Coil_Num', 'Ro', 'L', 'I_tot', 'N_turns_tot', 'helicity', 'h_cable
 
 
 # load TS+DS contribution to PS
-#PSoff_file = '/home/shared_data/Bmaps/SolCalc_complete/Mau13.SolCalc.PS_region.standard.PSoff.pkl'
-PSoff_file = helicalc_data+'Bmaps/aux/Mau13.SolCalc.PS_region.standard.PSoff.pkl'
+#PSoff_file = '/home/shared_data/Bmaps/SolCalc_complete/Mu2e_V13.SolCalc.PS_region.standard.PSoff.pkl'
+PSoff_file = helicalc_data+'Bmaps/aux/Mu2e_V13.SolCalc.PS_region.standard.PSoff.pkl'
 df_PSoff = pd.read_pickle(PSoff_file)
 df_PSoff = df_PSoff.astype(float)
 # m = (df_PSoff.Y == 0.) & (np.isin(df_PSoff.X - 3.904, [0., 0.4, 0.7]))

@@ -158,7 +158,7 @@ class StraightIntegrator3D(object):
 
         return self.df
 
-    def save_grid_calc(self, savetype='pkl', savename=f'Bmaps/helicalc_partial/Mau13.DS_region.standard-busbar.cond_N_57_straight_TEST', all_cols=False):
+    def save_grid_calc(self, savetype='pkl', savename=f'Bmaps/helicalc_partial/Mu2e_V13.DS_region.standard-busbar.cond_N_57_straight_TEST', all_cols=False):
         # determine which columns to save
         i = int(round(self.geom_df['cond N']))
         cols = ['X', 'Y', 'Z']
@@ -328,7 +328,7 @@ class ArcIntegrator3D(object):
 
         return self.df
 
-    def save_grid_calc(self, savetype='pkl', savename=f'Bmaps/helicalc_partial/Mau13.DS_region.standard-busbar.cond_N_57_arc_TEST', all_cols=False):
+    def save_grid_calc(self, savetype='pkl', savename=f'Bmaps/helicalc_partial/Mu2e_V13.DS_region.standard-busbar.cond_N_57_arc_TEST', all_cols=False):
         # determine which columns to save
         try:
             i = int(round(self.geom_df['cond N']))

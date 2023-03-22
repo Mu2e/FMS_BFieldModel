@@ -287,7 +287,7 @@ class SolCalcIntegrator(object):
 
         return self.df
 
-    def save_grid_calc(self, savetype='pkl', savename='data/Mau13.PS_region.standard.coil0', all_solcalc_cols=False):
+    def save_grid_calc(self, savetype='pkl', savename='data/Mu2e_V13.PS_region.standard.coil0', all_solcalc_cols=False):
         # determine which columns to save
         i = int(round(self.geom_coil.Coil_Num))
         cols = ['X', 'Y', 'Z']

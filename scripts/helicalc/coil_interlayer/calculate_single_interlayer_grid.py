@@ -15,7 +15,10 @@ from helicalc.solenoid_geom_funcs import load_all_geoms
 datadir = helicalc_data+'Bmaps/helicalc_partial/'
 
 # load straight bus bars, dump all other geometries
-df_dict = load_all_geoms(version=13, return_dict=True)
+# paramname = 'Mu2e_V13'
+paramname = 'Mu2e_V13_altDS11'
+version = paramname.replace('Mu2e_V', '')
+df_dict = load_all_geoms(version=version, return_dict=True)
 df_interlayer = df_dict['interlayers']
 
 # assume same chunk size for everything, for now
@@ -74,10 +77,10 @@ if __name__=='__main__':
         args.Testing = args.Testing.strip() == 'y'
     # set up base directory/name
     if args.Testing:
-        base_name = f'Bmaps/helicalc_partial/tests/Mau13.{reg}_region.'+\
+        base_name = f'Bmaps/helicalc_partial/tests/{paramname}.{reg}_region.'+\
                      'test-helicalc.'
     else:
-        base_name = f'Bmaps/helicalc_partial/Mau13.{reg}_region.'+\
+        base_name = f'Bmaps/helicalc_partial/{paramname}.{reg}_region.'+\
                      'standard-helicalc.'
     # print configs
     print(f'Region: {reg}')

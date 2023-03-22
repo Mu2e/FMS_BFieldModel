@@ -36,12 +36,12 @@ def run_cfgs():
         print('Found "data/Bmaps/aux/"')
     # check for PSOff file
     print('Checking for "PSOff" file for SolCalc_GUI...')
-    if not 'Mau13.SolCalc.PS_region.standard.PSoff.pkl' in os.listdir(base_dir+'data/Bmaps/aux/'):
+    if not 'Mu2e_V13.SolCalc.PS_region.standard.PSoff.pkl' in os.listdir(base_dir+'data/Bmaps/aux/'):
         raise OSError('Could not find "PSOff" file:\n'+
-                      '"data/Bmaps/aux/Mau13.SolCalc.PS_region.standard.PSoff.pkl"\n'+
+                      '"data/Bmaps/aux/Mu2e_V13.SolCalc.PS_region.standard.PSoff.pkl"\n'+
                       'Please copy the file and install package again.')
     else:
-        print('Found "data/Bmaps/aux/Mau13.SolCalc.PS_region.standard.PSoff.pkl"')
+        print('Found "data/Bmaps/aux/Mu2e_V13.SolCalc.PS_region.standard.PSoff.pkl"')
 
 if __name__=='__main__':
     run_cfgs()

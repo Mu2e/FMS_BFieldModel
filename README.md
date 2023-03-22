@@ -21,7 +21,7 @@ Note: on an Intel i7 laptop with a strong internet connection, this step takes ~
 
 4. The SolCalc GUI requires a pickled pandas.DataFrame with field values without the PS coils. Please contact ckampa13@gmail.com if you need this file. The file is expected to be in the following location:
 ```
-data/Bmaps/aux/Mau13.SolCalc.PS_region.standard.PSoff.pkl
+data/Bmaps/aux/Mu2e_V13.SolCalc.PS_region.standard.PSoff.pkl
 ```
 where `data/` is the symbolic link created in the previous step.
 

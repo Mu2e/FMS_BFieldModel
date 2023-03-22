@@ -16,7 +16,8 @@ datadir = helicalc_data+'Bmaps/helicalc_partial/'
 
 # load coils
 paramdir = helicalc_dir + 'dev/params/'
-paramname = 'Mu2e_V13'
+# paramname = 'Mu2e_V13'
+paramname = 'Mu2e_V13_altDS11'
 
 geom_df = read_solenoid_geom_combined(paramdir,paramname).iloc[55:].copy()
 # load chunk data
@@ -71,9 +72,9 @@ if __name__=='__main__':
     # set up base directory/name
     if args.Testing:
         #reg = 'DS'
-        base_name = f'Bmaps/helicalc_partial/tests/Mau13.{reg}_region.test-helicalc.'
+        base_name = f'Bmaps/helicalc_partial/tests/{paramname}.{reg}_region.test-helicalc.'
     else:
-        base_name = f'Bmaps/helicalc_partial/Mau13.{reg}_region.standard-helicalc.'
+        base_name = f'Bmaps/helicalc_partial/{paramname}.{reg}_region.standard-helicalc.'
     # print configs
     print(f'Region: {reg}')
     # redirect stdout to log file

@@ -66,12 +66,15 @@ def rz_min(ZTERM, z):
     #return z - (zeta + (phi-phi0) * pitch_bar - L/2 + t_gi)
     return z - ZTERM
 
-def helix_integrand_Bx_min(RX, RY, RZ, R2_32, HRHOCOSPHI, HRHOSINPHI, pitch_bar):
-    return (HRHOCOSPHI * RZ - pitch_bar * RY) / R2_32
-def helix_integrand_By_min(RX, RY, RZ, R2_32, HRHOCOSPHI, HRHOSINPHI, pitch_bar):
-    return (HRHOSINPHI * RZ + pitch_bar * RX) / R2_32
+# FIXME! Is the second term in Bx, By correct? Missing factor of rho?
+def helix_integrand_Bx_min(RX, RY, RZ, R2_32, HRHOCOSPHI, HRHOSINPHI, pitch_bar, RHO):
+    # return (HRHOCOSPHI * RZ - pitch_bar * RY) / R2_32 # incorrect
+    return (HRHOCOSPHI * RZ - pitch_bar * RHO * RY) / R2_32 # correct
+def helix_integrand_By_min(RX, RY, RZ, R2_32, HRHOCOSPHI, HRHOSINPHI, pitch_bar, RHO):
+    # return (HRHOSINPHI * RZ + pitch_bar * RX) / R2_32 # incorrect
+    return (HRHOSINPHI * RZ + pitch_bar * RHO * RX) / R2_32 # correct
 
-def helix_integrand_Bz_min(RX, RY, RZ, R2_32, HRHOCOSPHI, HRHOSINPHI, pitch_bar):
+def helix_integrand_Bz_min(RX, RY, RZ, R2_32, HRHOCOSPHI, HRHOSINPHI, pitch_bar, RHO):
     return - (HRHOSINPHI * RY + HRHOCOSPHI * RX) / R2_32
 
 ####

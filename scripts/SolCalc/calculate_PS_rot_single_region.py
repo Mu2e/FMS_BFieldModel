@@ -92,7 +92,7 @@ if __name__=='__main__':
     # create grid
     df = generate_cartesian_grid_df(regions[reg])
     # define base save name
-    base_name = f'Mau13.SolCalc.{reg}_region.{base_coils}'
+    base_name = f'{paramname}.SolCalc.{reg}_region.{base_coils}'
     # load geometry
     geom_df_mu2e = read_solenoid_geom_combined(paramdir,paramname)
     # which coils

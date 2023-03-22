@@ -745,6 +745,7 @@ def gen_helical_coil_surface_points(df, coil_num, conductor_end='out',
     h = df_.h_sc # radial
     phi0 = df_.phi0
     phi1 = df_.phi1
+    # '''
     # check how to wind
     if layer != N_layers:
         phi_start = phi0
@@ -757,6 +758,32 @@ def gen_helical_coil_surface_points(df, coil_num, conductor_end='out',
         hold = phi_start
         phi_start = phi_end
         phi_end = hold
+    # '''
+    '''
+    if layer == N_layers:
+        # in last layer, wind until phi1 reached
+        # FIXME! This only works assuming outer layer has helicity=+1.
+        # This is true for Mu2e but not guaranteed to be generally true.
+        # It also assumes phi1 < phi0, else this only works for helicity=-1.
+        last_turn_rad = 2*np.pi - abs(phi1-phi0)
+        if N_layers < 2:
+            phi_start = phi0
+        else:
+            # FIXME!
+            if np.isclose(N_turns, int(N_turns)):
+                phi_start = phi0
+            else:
+                phi_start = phi0 - (1 - N_turns % 1) * 2*np.pi
+        phi_end = self.phi_i + self.helicity*(2*np.pi*(geom_coil.N_turns-1) + self.last_turn_rad)
+    else:
+        # update phi_i, if N_turns is not an integer
+        # this ensures negative helicity layer 1 actually has input at the location of the bus bar
+        if np.isclose(geom_coil.N_turns, int(geom_coil.N_turns)):
+            self.phi_i = geom_coil.phi0
+        else:
+            self.phi_i = geom_coil.phi0 - (1 - geom_coil.N_turns % 1) * 2*np.pi
+        self.phi_f = self.phi_i + self.helicity*(2*np.pi*geom_coil.N_turns)
+    '''
     # how much to subtract in phis
     dphi = abs(phi_end-phi_start)
     # full number of turns

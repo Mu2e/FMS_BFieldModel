@@ -15,7 +15,9 @@ from helicalc.solenoid_geom_funcs import load_all_geoms
 datadir = helicalc_data+'Bmaps/auxiliary_partial/'
 
 # load straight bus bars, dump all other geometries
-df_dict = load_all_geoms(version=13, return_dict=True)
+paramname = 'Mu2e_V13'
+version = paramname.replace('Mu2e_V', '')
+df_dict = load_all_geoms(version=version, return_dict=True)
 df_radial_coils = df_dict['radial_coils']
 
 # assume same chunk size for everything, for now
@@ -79,10 +81,10 @@ if __name__=='__main__':
         args.Testing = args.Testing.strip() == 'y'
     # set up base directory/name
     if args.Testing:
-        base_name = f'Bmaps/auxiliary_partial/tests/Mau13.{reg}_region.'+\
+        base_name = f'Bmaps/auxiliary_partial/tests/{paramname}.{reg}_region.'+\
                      'test-radial_coil.'
     else:
-        base_name = f'Bmaps/auxiliary_partial/Mau13.{reg}_region.'+\
+        base_name = f'Bmaps/auxiliary_partial/{paramname}.{reg}_region.'+\
                      'standard-radial_coil.'
     # print configs
     print(f'Region: {reg}')

@@ -21,7 +21,8 @@ from helicalc.constants import (
 
 # paramdir = '/home/ckampa/coding/helicalc/dev/params/'
 paramdir = helicalc_dir + 'dev/params/'
-paramname = 'Mu2e_V13'
+# paramname = 'Mu2e_V13'
+paramname = 'Mu2e_V13_altDS11'
 datadir = helicalc_data+'Bmaps/SolCalc_partial/'
 
 regions = {'PS': PS_grid, 'TSu': TSu_grid, 'TSd': TSd_grid, 'DS': DS_grid,
@@ -73,7 +74,7 @@ if __name__=='__main__':
     else:
         df = generate_cartesian_grid_df(regions[reg])
     # define base save name
-    base_name = f'Mau13.SolCalc.{reg}_region.standard'
+    base_name = f'{paramname}.SolCalc.{reg}_region.standard'
     # load geometry
     geom_df_mu2e = read_solenoid_geom_combined(paramdir,paramname)
     # TESTING (only a few coils)

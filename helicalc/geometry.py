@@ -41,7 +41,7 @@ def read_solenoid_geom_combined(params_dir, geom_name, sep=',', skiprows=1):
     df['pitch_2'] = (df.L - df.w_cable - 2.*df.t_gi) / df.N_turns
     # df['pitch'] = df.L / df.N_turns
     df['pitch_bar'] = df['pitch'] / (2*np.pi) # follows OPERA
-    # df['pitch_bar'] = df['pitch_2'] / (2*np.pi)
+    df['pitch_bar_2'] = df['pitch_2'] / (2*np.pi)
 
     # integration limits
     # df['phi_i']

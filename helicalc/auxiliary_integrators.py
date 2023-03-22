@@ -172,7 +172,7 @@ class RadialStraightIntegrator1D(object):
 
         return self.df
 
-    def save_grid_calc(self, savetype='pkl', savename=f'Bmaps/helicalc_partial/Mau13.DS_region.auxiliary.Coil_Num_0out_radial_TEST', all_cols=False):
+    def save_grid_calc(self, savetype='pkl', savename=f'Bmaps/helicalc_partial/Mu2e_V13.DS_region.auxiliary.Coil_Num_0out_radial_TEST', all_cols=False):
         # determine which columns to save
         i = self.geom_df['Coil_Num']
         cols = ['X', 'Y', 'Z']
