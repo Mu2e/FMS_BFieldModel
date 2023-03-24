@@ -89,3 +89,23 @@ def generate_cylindrical_grid_df(grid_dict, dec_round=3):
 #     df = pd.DataFrame({'R':R, 'Z':Z})
 
 #     return df
+
+# calculate cable length of all coils in a solenoid
+def calc_cable_lengths(geom_df, use_rho_0_a=True):
+    N_cables = len(geom_df)
+    L_cable_list = []
+    L_cable_coils = 0.
+    for i in np.arange(N_cables):
+        geom_coil = geom_df.iloc[i]
+        if use_rho_0_a:
+            R0 = (geom_coil.rho0_a+geom_coil.rho1_a)/2.
+        else:
+            R0 = (geom_coil.Ri + geom_coil.h_cable/2.)
+        N_L = int(geom_coil.N_layers)
+        L_cable = 0.
+        for l in range(N_L):
+            R = R0 + l*geom_coil.h_cable
+            L_cable += 2*np.pi*R*geom_coil.N_turns
+        L_cable_list.append(L_cable)
+        L_cable_coils += L_cable
+    return L_cable_coils, L_cable_list

@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -14,9 +15,17 @@ from helicalc import helicalc_dir, helicalc_data
 from helicalc.solcalc import SolCalcIntegrator
 from helicalc.geometry import read_solenoid_geom_combined
 from helicalc.cylinders import get_thick_cylinders_padded
+# additional code & info for Mu2e-II PS
+sys.path.append(helicalc_dir+'scripts/SolCalc_GUI/')
+from requirements_Mu2e import *
+from resistive_power import *
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
+# globals
+resistivities_dict = {'Cu (20C)': rho_Cu, 'Cu (77K, calc.)': rho_Cu_77K,
+                      'Cu (77K, optimistic)': rho_Cu_77K_approx, 'S.C.': rho_SC}
+res_keys = sorted(resistivities_dict.keys())
 # load nominal PS geom
 # paramdir = '/home/ckampa/coding/helicalc/dev/params/'
 paramdir = helicalc_dir + 'dev/params/'
@@ -78,6 +87,28 @@ app.layout = html.Div([
                          editable=True),
     html.Br(),
     html.Button('Recalculate Field', id='calc-button', style=button_style),
+    # cable length and power
+    html.Br(),
+    html.H2('Cable Length & Resistive Power Consumption'),
+    html.Div(children='(Click "Recalculate Field" to update)'),
+    # html.Label('Total Length [m]:'),
+    html.H3('Length'),
+    html.Div(id='tot-length-out'),
+    html.Div(id='lengths-out'),
+    # html.Label('Power:'),
+    html.H3('Power'),
+    html.Label('Select Resistivity [Ohm m]:'),
+    dcc.Dropdown(
+        id='resistivity',
+        options=res_keys,
+        value='S.C.',
+        multi=False,
+        #style=desc_style,
+    ),
+    html.Div(id='resistivity-out'),
+    # html.Label('Total Power [MW]:'),
+    html.Div(id='tot-power-out'),
+    html.Div(id='powers-out'),
     # field plot
     html.H2('Field Plot'),
     html.Label('Plotting Options:'),
@@ -269,6 +300,30 @@ def calculate_field(df):
     print(df_calc)
     print(df_calc.info())
     return df_calc.to_json()
+
+# lengths and power
+@app.callback(
+    [Output('tot-length-out', 'children'),
+     Output('lengths-out', 'children'),
+     Output('resistivity-out', 'children'),
+     Output('tot-power-out', 'children'),
+     Output('powers-out', 'children'),],
+    [Input('geom-data', 'children'),
+     Input('resistivity', 'value'),],
+)
+def length_and_power(df, res_key):
+    geom_df = pd.read_json(df)
+    rho = resistivities_dict[res_key]
+    tup = calc_resistive_power_coils(geom_df, resistivity=rho, full_cable=False)
+    power_tot_MW, _, power_list_MW, _, R_cables, R_list, I_list, \
+    L_cable_coils, L_cable_list = tup
+    # reformat for nicer printing
+    L_cable_coils = f'Total Length: {L_cable_coils:0.2e} [m]'
+    L_cable_list = 'Coil Lengths: '+', '.join([f'{i}: {L:0.2e} [m]' for i, L in enumerate(L_cable_list)])
+    rho = f'rho = {rho:0.5f} [Ohm m]'
+    power_tot_MW = f'Total Power: {power_tot_MW:0.2f} [MW]'
+    power_list_MW = 'Coil Power:'+', '.join([f'{i}: {P:0.3f} [MW]' for i, P in enumerate(power_list_MW)])
+    return L_cable_coils, L_cable_list, rho, power_tot_MW, power_list_MW
 
 # update plot
 @app.callback(
