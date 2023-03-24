@@ -7,7 +7,7 @@ from helicalc.tools import calc_cable_lengths
 rho_Cu = 1.68e-8 # Ohm m, 20 deg C
 alpha_Cu = 0.0039 # deg C^-1 (or K^-1)
 rho_Cu_77K = rho_Cu * (1 + alpha_Cu * (77.-293.))# Ohm m, LN2 temp
-rho_Cu_77K_approx = rho_Cu * 10. # Ohm m, LN2 temp, suggested improvement from A. Hocker
+rho_Cu_77K_approx = rho_Cu / 10. # Ohm m, LN2 temp, suggested improvement from A. Hocker
 # for superconductor
 rho_SC = 0.
 

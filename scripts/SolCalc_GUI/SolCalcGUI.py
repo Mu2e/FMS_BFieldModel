@@ -26,6 +26,12 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 resistivities_dict = {'Cu (20C)': rho_Cu, 'Cu (77K, calc.)': rho_Cu_77K,
                       'Cu (77K, optimistic)': rho_Cu_77K_approx, 'S.C.': rho_SC}
 res_keys = sorted(resistivities_dict.keys())
+
+# color coding for regions
+region_key = html.Div([html.Span("PS1, ", style={"color": "rgba(0, 256, 0, 1.0)"}),
+              html.Span("PS2, ", style={"color": "rgba(245, 200, 0, 1.0)"}),
+              html.Span("TS1", style={"color": "rgba(245, 0, 227, 1.0)"})])
+
 # load nominal PS geom
 # paramdir = '/home/ckampa/coding/helicalc/dev/params/'
 paramdir = helicalc_dir + 'dev/params/'
@@ -40,11 +46,11 @@ df_PS_nom = read_solenoid_geom_combined(paramdir, paramfile).iloc[:3]
 drz = np.array([5e-3, 1e-2])
 
 # editable vs. dependent columns
-cols_edit = ['Ri', 'x', 'y', 'z', 'rot0', 'rot1', 'rot2', 'N_layers',
-             'N_turns', 'I_turn']
-cols_stat = ['Coil_Num', 'Ro', 'L', 'I_tot', 'N_turns_tot', 'helicity', 'h_cable',
-             'w_cable', 'h_sc', 'w_sc', 't_gi', 't_ci', 't_il', 'phi0_deg', 'phi1_deg',
-             'pitch']
+cols_edit = ['Ri', 'z',  'N_layers',
+             'N_turns', 'I_turn', 'h_cable',
+             'w_cable', 'h_sc', 'w_sc',]
+cols_stat = ['Coil_Num', 'Ro', 'L', 'I_tot', 'N_turns_tot', 'helicity', 't_gi', 't_ci', 't_il', 'phi0_deg', 'phi1_deg',
+             'pitch', 'x', 'y', 'rot0', 'rot1', 'rot2']
 
 
 # load TS+DS contribution to PS
@@ -53,7 +59,8 @@ PSoff_file = helicalc_data+'Bmaps/aux/Mu2e_V13.SolCalc.PS_region.standard.PSoff.
 df_PSoff = pd.read_pickle(PSoff_file)
 df_PSoff = df_PSoff.astype(float)
 # m = (df_PSoff.Y == 0.) & (np.isin(df_PSoff.X - 3.904, [0., 0.4, 0.7]))
-m = (df_PSoff.Y == 0.) & (np.isin(df_PSoff.X, [3.904, 4.304, 4.604]))
+#m = (df_PSoff.Y == 0.) & (np.isin(df_PSoff.X, [3.904, 4.304, 4.604]))
+m = (df_PSoff.Y == 0.) & (np.isin(df_PSoff.X, [3.904, 4.054, 4.404]))
 df_PSoff_lines = df_PSoff[m].copy().reset_index(drop=True, inplace=False)
 # print(df_PSoff_lines)
 
@@ -66,7 +73,8 @@ button_style = {'fontSize': 'large',
                 }
 
 # plot globals
-marker_size = 10
+# marker_size = 10
+marker_size = 3
 fsize_plot = 20
 fsize_ticks = 14
 
@@ -109,6 +117,26 @@ app.layout = html.Div([
     # html.Label('Total Power [MW]:'),
     html.Div(id='tot-power-out'),
     html.Div(id='powers-out'),
+    # field requiremetns
+    html.Br(),
+    html.H2('Field Requirements'),
+    html.Div(children='(See mu2e-docdb-#s: 945, 947, 1266)'),
+    html.Label('Plotting Options:'),
+    html.Label('Axial Variable:'),
+    dcc.RadioItems(
+        id='x-var-req',
+        options=[{'label': i, 'value': i} for i in ['z', 's']],
+        value='z',
+        labelStyle={'display': 'inline-block'},
+        #style=desc_style,
+    ),
+    # SUMMARY OF WHETHER REQ SATISFIED HERE
+    html.H3('Axial Field Values'),
+    # region_key,
+    dcc.Graph(id='axial-field-plot'),
+    html.H3('Field Gradients'),
+    # region_key,
+    # PLOT GOES HERE
     # field plot
     html.H2('Field Plot'),
     html.Label('Plotting Options:'),
@@ -167,7 +195,7 @@ app.layout = html.Div([
     # '''),
     #html.Div(html.P(['Notes on depdendent parameters:', html.Br(),
     html.Div(html.P([
-                    'Ro = Ri + h_cable*N_layers + 2*t_gi + 2*t_ci*N_layers + 2*t_il*(N_layers-1)', html.Br(),
+                    'Ro = Ri + h_cable*N_layers + 2*t_gi + 2*t_ci*N_layers + 2*t_il*(N_layers-1) [note nominal does not seem to include t_gi]', html.Br(),
                     'pitch = h_cable + 2*t_ci', html.Br(),
                     'L = pitch*N_turns + 2*t_gi [note nominal seems to use (N_turns-1)]', html.Br(),
                     'N_turns_tot = N_turns * N_layers', html.Br(),
@@ -195,10 +223,25 @@ def update_geom_data(n_clicks, rows_stat, cols_stat, rows_edit, cols_edit):
     print(df_edit.info())
     df_stat = pd.DataFrame(rows_stat, columns=[c['name'] for c in cols_stat], dtype=float)
     # calculations
-    df_stat.loc[:, 'Ro'] = df_edit.Ri + df_stat.h_cable * df_edit.N_layers + \
-    2 * df_stat.t_gi + 2*df_stat.t_ci*df_edit.N_layers +\
+    # recalculate pitch, otherwise L will be wrong -- needed once I change conductor params
+    if 'w_cable' in df_stat.columns:
+        df_stat.loc[:, 'pitch'] = df_stat.loc[:, 'w_cable'] + 2*df_stat.loc[:, 't_ci']
+        df_ = df_stat
+    else:
+        df_stat.loc[:, 'pitch'] = df_edit.loc[:, 'w_cable'] + 2*df_stat.loc[:, 't_ci']
+        df_ = df_edit
+    # I think correct!
+    #df_stat.loc[:, 'Ro'] = df_edit.Ri + df_stat.h_cable * df_edit.N_layers + \
+    #2 * df_stat.t_gi + 2*df_stat.t_ci*df_edit.N_layers +\
+    #2*df_stat.t_il*(df_edit.N_layers - 1)
+    # no ground insulation
+    df_stat.loc[:, 'Ro'] = df_edit.Ri + df_.h_cable * df_edit.N_layers + \
+    2*df_stat.t_ci*df_edit.N_layers +\
     2*df_stat.t_il*(df_edit.N_layers - 1)
-    df_stat.loc[:, 'L'] = df_stat.pitch * df_edit.N_turns + 2 * df_stat.t_gi
+    # I think correct!
+    # df_stat.loc[:, 'L'] = df_stat.pitch * df_edit.N_turns + 2 * df_stat.t_gi
+    # nominal seems to remove a turn...
+    df_stat.loc[:, 'L'] = df_stat.pitch * (df_edit.N_turns-1) + 2 * df_stat.t_gi
     df_stat.loc[:, 'N_turns_tot'] = df_edit.N_turns * df_edit.N_layers
     df_stat.loc[:, 'I_tot'] = df_edit.I_turn + df_stat.N_turns_tot
     # combine results
@@ -319,11 +362,211 @@ def length_and_power(df, res_key):
     L_cable_coils, L_cable_list = tup
     # reformat for nicer printing
     L_cable_coils = f'Total Length: {L_cable_coils:0.2e} [m]'
-    L_cable_list = 'Coil Lengths: '+', '.join([f'{i}: {L:0.2e} [m]' for i, L in enumerate(L_cable_list)])
-    rho = f'rho = {rho:0.5f} [Ohm m]'
+    L_cable_list = 'Coil Lengths: '+', '.join([f'{i+1}: {L:0.2e} [m]' for i, L in enumerate(L_cable_list)])
+    rho = f'rho = {rho:0.2e} [Ohm m]'
     power_tot_MW = f'Total Power: {power_tot_MW:0.2f} [MW]'
-    power_list_MW = 'Coil Power:'+', '.join([f'{i}: {P:0.3f} [MW]' for i, P in enumerate(power_list_MW)])
+    power_list_MW = 'Coil Power:'+', '.join([f'{i+1}: {P:0.3f} [MW]' for i, P in enumerate(power_list_MW)])
     return L_cable_coils, L_cable_list, rho, power_tot_MW, power_list_MW
+
+# update axial field plot (requirements)
+@app.callback(
+    Output('axial-field-plot', 'figure'),
+    [Input('field-data', 'children'),
+     Input('x-var-req', 'value'),],
+)
+def axial_field_plot(df, xvar):
+    df = pd.read_json(df).astype(float)
+    zs = df.Z.values
+    xs = np.sort(df.X.unique())[:1]
+    rs = xs - 3.904
+    # shared calculations
+    if xvar == 'z':
+        x_func = lambda z: z
+        # zs = df.Z.values
+        # zs_PS1 = PS1_z_range
+        # zs_PS2 = PS2_z_range
+        # zs_TS1 = TS1_z_range
+    else:
+        x_func = lambda z: s_PS(z)
+        # zs = s_PS(df.Z.values)
+        # zs_PS1 = [s_PS(z_) for z_ in PS1_z_range]
+        # zs_PS2 = [s_PS(z_) for z_ in PS2_z_range]
+        # zs_TS1 = [s_PS(z_) for z_ in TS1_z_range]
+    # grab axial values
+    ycol = 'Bz' # field
+    m1 = (df.X == xs[0]) # axial line
+    ms = [m1,]
+    # plot axial trace
+    B = df[ycol].values.astype(float)
+    # add TS contribution
+    B += df_PSoff_lines[ycol].values
+    # convert to Tesla
+    unit = 'Tesla'
+    B *= 1e-4
+    t_inc = ''
+    # start trace collection
+    # data = []
+    # main data
+    Bz_traces = [go.Scatter(x=x_func(zs[m_]), y=B[m_], mode='lines+markers',
+                            marker={'color':c, 'size': marker_size, 'opacity': 0.85,
+                            'line': {'width':0.1, 'color': 'white'}},
+                            line={'width':1, 'color': c},
+                            name=f'R = {r:0.2f}'
+                            ) for m_, c, r in zip(ms, ['blue',], rs)]
+    # plot requirements related things
+    # point values
+    PS1_Bz_trace1 = go.Scatter(x=[x_func(z_PS1_Bz_min), ], y=[PS1_Bz_min + 0.2,],
+                               name=f'Minimum Field @ s={s_PS1_Bz_min:0.2f} m<br>Bz = {PS1_Bz_min:0.2f} T',
+                               mode='markers', marker=dict(color='black', size=1.0,),
+                               error_y=dict(
+                                   width=10,
+                                   thickness=1.5,
+                                   color='black',
+                                   type='data',
+                                   symmetric=True,
+                                   array=[0.2],)
+                               )
+    PS2_Bz_trace1 = go.Scatter(x=[x_func(z_PS2_Bz_nom),], y=[PS2_Bz_nom,],
+                               name=f'Allowed Field @ s={s_PS2_Bz_nom:0.2f} m<br>Bz = [{PS2_Bz_nom*(1-tol_PS2_Bz):0.3f}, {PS2_Bz_nom*(1+tol_PS2_Bz):0.3f}] T',
+                               mode='markers', marker=dict(color='rgba(130,0,255,1)', size=1.0,),
+                               error_y=dict(
+                                   width=10,
+                                   thickness=1.5,
+                                   color='rgba(130,0,255,1)',
+                                   type='data',
+                                   symmetric=True,
+                                   array=[PS2_Bz_nom * tol_PS2_Bz,],)
+                               )
+    TS1_Bz_trace1 = go.Scatter(x=[x_func(z_TS1_Bz_nom),], y=[TS1_Bz_nom,],
+                               name=f'Allowed Field @ s={s_TS1_Bz_nom:0.2f} m<br>Bz = [{TS1_Bz_nom*(1-tol_TS1_Bz):0.3f}, {TS1_Bz_nom*(1+tol_TS1_Bz):0.3f}] T',
+                               mode='markers', marker=dict(color='rgba(162,48,48,1)', size=1.0,),
+                               error_y=dict(
+                                   width=10,
+                                   thickness=1.5,
+                                   color='rgba(162,48,48,1)',
+                                   type='data',
+                                   symmetric=True,
+                                   array=[TS1_Bz_nom * tol_TS1_Bz,],)
+                               )
+    # ranges
+    # print(df)
+    # add TS
+    df.loc[:, 'Bz'] = df.loc[:, 'Bz'] + df_PSoff_lines.loc[:, 'Bz']
+    df0 = df.query(f'X == {xs[0]}').copy()
+    df0.loc[:, 'Bz'] = df0.loc[:, 'Bz']*1e-4
+    tup = check_PS_axial_values(df0, z_col='Z', Bz_col='Bz', x0=xs[0], y0=0.,
+                          PS1_z_range=PS1_z_range, PS2_z_range=PS2_z_range,
+                          dZ=0.001, z_at_min=z_PS2_Bz_nom,
+                          z_at_max=PS2_z_range[0], z_PS1_Bz_min=z_PS1_Bz_min,
+                          PS1_Bz_min=PS1_Bz_min, z_PS2_Bz_nom=z_PS2_Bz_nom,
+                          PS2_Bz_nom=PS2_Bz_nom, tol_PS2_Bz=tol_PS2_Bz,
+                          z_TS1_Bz_nom=z_TS1_Bz_nom, TS1_Bz_nom=TS1_Bz_nom,
+                          tol_TS1_Bz=tol_TS1_Bz)
+    to_spec, N_out_of_tol, map_in_tol, zs_interp_PS2, Bnom_interp, Bnom_interp_up, Bnom_interp_down, \
+    Bzmax_val_to_spec, Bmax, Bzmax_loc_to_spec, zmax_actual, Bz_at_PS1_loc_to_spec, Bz_PS1, \
+    Bz_PS2_TS1_to_spec, Bz_PS2_TS1, Bz_TS1_TS2_to_spec, Bz_TS1_TS2 = tup
+    print(to_spec, Bzmax_val_to_spec, Bzmax_loc_to_spec, Bz_at_PS1_loc_to_spec, Bz_PS2_TS1_to_spec, Bz_TS1_TS2_to_spec)
+    print(f'Bzmax_PS1_loc: {Bz_PS1, PS1_Bz_min}')
+    # lines
+    TS_allow_trace1 = go.Scatter(x=x_func(zs_interp_PS2), y=Bnom_interp_down,
+                                 mode='lines', line=dict(dash='dash', color='gray'),
+                                 name='Allowed Range (PS2)', legendgroup='PS2_range',
+                                )
+    TS_allow_trace2 = go.Scatter(x=x_func(zs_interp_PS2), y=Bnom_interp_up,
+                                 mode='lines', line=dict(dash='dash', color='gray'),
+                                 name='Allowed Range (PS2)', legendgroup='PS2_range',
+                                 showlegend=False,
+                                )
+    # region annotations
+    PS1_annot = go.layout.Annotation(dict(
+                        x=x_func(PS1_z_range[0]+0.2),
+                        y=0.1,
+                        ax=x_func(PS1_z_range[0]+0.2),
+                        ay=0.1,
+                        axref='x',
+                        ayref='y',
+                        showarrow=False,
+                        text='PS1',
+                        font=dict(color='black', size=16,))
+    )
+    PS2_annot = go.layout.Annotation(dict(
+                        x=x_func(PS2_z_range[0]+0.2),
+                        y=0.1,
+                        ax=x_func(PS2_z_range[0]+0.2),
+                        ay=0.1,
+                        axref='x',
+                        ayref='y',
+                        showarrow=False,
+                        text='PS2',
+                        font=dict(color='black', size=16,))
+    )
+    TS1_annot = go.layout.Annotation(dict(
+                        x=x_func(TS1_z_range[0]+0.2),
+                        y=0.1,
+                        ax=x_func(TS1_z_range[0]+0.2),
+                        ay=0.1,
+                        axref='x',
+                        ayref='y',
+                        showarrow=False,
+                        text='TS1',
+                        font=dict(color='black', size=16,))
+    )
+    # PS1_Bz_annot = go.layout.Annotation(dict(
+    #                        x=x_func(z_PS1_Bz_min),
+    #                        y=PS1_Bz_min + 0.2,
+    #                        ax=x_func(z_PS1_Bz_min),
+    #                        ay=PS1_Bz_min,
+    #                        text=f'f<br><br><br><br>Minimum Field @ s={s_PS1_Bz_min:0.2f} m<br>Bz = {PS1_Bz_min:0.2f} T<br><br><br><br>f',
+    #                        font=dict(size=10),
+    #                        showarrow=True,
+    #                        axref='x',
+    #                        ayref='y',
+    #                        arrowhead=3,
+    #                        arrowwidth=1.5,
+    #                        arrowcolor='rgba(0,0,0,0.8)',)
+    # )
+    # PS2/TS1 value (range)
+    ####
+    # TS1/TS2 value (range)
+    ####
+    # TS2 values / gradient (region)
+    ####
+    # add all traces to layout
+    #data = [PS1_trace, PS2_trace, TS1_trace, PS1_Bz_trace,] + Bz_traces
+    data = [PS1_Bz_trace1, PS2_Bz_trace1, TS1_Bz_trace1, TS_allow_trace1, TS_allow_trace2] + Bz_traces
+    # layout should work with all configurations
+    layout = go.Layout(
+        title=f'PS Axis Field Requirements (x==3.904, y==0.0) m',
+        height=700,
+        font=dict(family="Courier New", size=fsize_plot,),
+        margin={'l': 60, 'b': 60, 't': 60, 'r': 60},
+        scene=dict(aspectmode='auto',
+                   #xaxis={'title': 'Z [m]', 'tickfont':{'size': fsize_ticks}},
+                   #yaxis={'title': f'{ycol} [{unit}]', 'tickfont':{'size': fsize_ticks}},
+        ),
+        xaxis={'title': f'{xvar} [m]', 'tickfont':{'size': fsize_ticks}},
+        yaxis={'title': f'B{xvar} [T]', 'tickfont':{'size': fsize_ticks}},
+        plot_bgcolor=plot_bg,
+        showlegend=True,
+        annotations=[PS1_annot, PS2_annot, TS1_annot,],
+    )
+
+    fig = go.Figure(data=data, layout=layout)
+
+    # add regions
+    # PS1
+    fig.add_vrect(x0=x_func(PS1_z_range[0]), x1=x_func(PS1_z_range[1]),
+                  fillcolor='rgba(0, 256, 0, 0.1)', layer='below', line_width=0,)
+    # PS2
+    fig.add_vrect(x0=x_func(PS2_z_range[0]), x1=x_func(PS2_z_range[1]),
+                  fillcolor='rgba(245, 200, 0, 0.1)', layer='below', line_width=0,)
+    # TS1
+    fig.add_vrect(x0=x_func(TS1_z_range[0]), x1=x_func(TS1_z_range[1]),
+                  fillcolor='rgba(245, 0, 227, 0.1)', layer='below', line_width=0,)
+
+    return fig
+    # return {'data': fig.data, 'layout': fig.layout}
+    # return {'data':data, 'layout':layout}
 
 # update plot
 @app.callback(
@@ -333,7 +576,7 @@ def length_and_power(df, res_key):
      Input('yaxis-type-field', 'value'),
      Input('include-TS-field', 'value'),
      Input('indiv-contrib', 'value'),
-     Input('field-unit', 'value')],
+         Input('field-unit', 'value')],
 )
 def field_plot(df, ycol, ytype, incTS, plotIndiv, unit):
     # save original unit

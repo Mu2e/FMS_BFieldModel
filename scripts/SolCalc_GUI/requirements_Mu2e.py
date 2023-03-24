@@ -4,6 +4,15 @@ import numpy as np
 from scipy.interpolate import interp1d
 from coordinate_funcs import *
 
+# physical requirements
+coil_min_rad = 1.670 / 2. # m
+cryo_inner_rad = 1.5 / 2. # m, nominal value
+cryo_max_outer_rad = 2.6 / 2. # m
+PS_TS_cryo_overlap = 0.561 # m
+total_cryo_length_max = 4.5 # m
+cryo_z_f = -3.443 # m
+cryo_z_i = cryo_z_f - total_cryo_length_max
+
 # regions defined in requirements docs
 PS1_s_range = [-10.58, -9.08] # m
 PS2_s_range = [-9.08, -6.58] # m
@@ -55,10 +64,14 @@ def check_PS_axial_values(df, z_col, Bz_col, x0=3.904, y0=0.,
                           z_TS1_Bz_nom=z_TS1_Bz_nom, TS1_Bz_nom=TS1_Bz_nom,
                           tol_TS1_Bz=tol_TS1_Bz):
     # store entire Z_line (no query for PS2 region)
-    df_ = df[np.isclose(df.X, x0) & np.isclose(df.Y, y0)]
+    df_ = df[np.isclose(df.X, x0) & np.isclose(df.Y, y0)].copy()
     df_PS2 = df_.query(f'{PS2_z_range[0]} <= {z_col} <= {PS2_z_range[1]}').copy()
+    # print(df)
+    # print(df.info())
+    # print(df_)
+    # print(df_PS2)
     # set up interpolation
-    interp_func = interp1d(df_[z_col], df_[Bz_col], fill_value="extrapolate")
+    interp_func = interp1d(df_[z_col].values, df_[Bz_col].values, fill_value="extrapolate")
     zs_interp = np.arange(df_[z_col].round(3).min(), df_[z_col].round(3).max()+dZ, dZ)
     zs_interp_PS2 = np.arange(df_PS2[z_col].round(3).min(), df_PS2[z_col].round(3).max()+dZ, dZ)
     Bz_interp = interp_func(zs_interp)
@@ -70,10 +83,12 @@ def check_PS_axial_values(df, z_col, Bz_col, x0=3.904, y0=0.,
         zmax = zs_interp[i_max]
     else:
         zmax = z_at_max
+    # print(zmax, Bmax)
     # ending values
     i_min = np.argmin(np.abs(zs_interp - z_at_min))
     Bmin = Bz_interp[i_min]
     zmin = zs_interp[i_min]
+    # print(zmin, Bmin)
     # nominal line
     slope = (Bmin - Bmax) / (zmin - zmax)
     Bnom_func = lambda z: slope * (z - zmin) + Bmin
