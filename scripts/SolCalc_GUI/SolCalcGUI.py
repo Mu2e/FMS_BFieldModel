@@ -385,7 +385,7 @@ def update_geom_data(n_clicks_calc, n_clicks_edit, edit_timestamp, conductor_key
     # nominal seems to remove a turn...
     df_stat.loc[:, 'L'] = df_stat.pitch * (df_edit.N_turns-1) + 2 * df_.t_gi
     df_stat.loc[:, 'N_turns_tot'] = df_edit.N_turns * df_edit.N_layers
-    df_stat.loc[:, 'I_tot'] = df_edit.I_turn + df_stat.N_turns_tot
+    df_stat.loc[:, 'I_tot'] = df_edit.I_turn * df_stat.N_turns_tot
     # combine results
     df_stat.reset_index(drop=True, inplace=True)
     df_edit.reset_index(drop=True, inplace=True)
@@ -612,7 +612,7 @@ def axial_field_plot(df, xvar):
     Bzmax_val_to_spec, Bmax, Bzmax_loc_to_spec, zmax_actual, Bz_at_PS1_loc_to_spec, Bz_PS1, \
     Bz_PS2_TS1_to_spec, Bz_PS2_TS1, Bz_TS1_TS2_to_spec, Bz_TS1_TS2 = tup
     # add max value as different color scatter point
-    if Bzmax_loc_to_spec:
+    if Bzmax_loc_to_spec and Bzmax_val_to_spec:
         c='green'
         sym='diamond'
     else:
@@ -623,7 +623,7 @@ def axial_field_plot(df, xvar):
                             'line': {'width':0.1, 'color': 'white'}, 'symbol':sym},
                             line={'width':1, 'color': 'white'},
                             name=f'B{xvar}_max={Bmax:0.2f} T @ {xvar}={x_func(zmax_actual):0.3f} m<br>'+
-                            f'In PS1? {Bzmax_loc_to_spec}'
+                            f'In PS1? {Bzmax_loc_to_spec}, B{xvar}_max > {PS1_Bz_min:0.1f}? {Bzmax_val_to_spec}'
                             ))
     # print(to_spec, Bzmax_val_to_spec, Bzmax_loc_to_spec, Bz_at_PS1_loc_to_spec, Bz_PS2_TS1_to_spec, Bz_TS1_TS2_to_spec)
     # print(f'Bzmax_PS1_loc: {Bz_PS1, PS1_Bz_min}')
@@ -939,10 +939,14 @@ def field_plot(df, ycol, ytype, incTS, plotIndiv, unit):
     rs = xs - 3.904
     # shared calculations
     zs = df.Z.values
-    m1 = (df.X == xs[0])
-    m2 = (df.X == xs[1])
-    m3 = (df.X == xs[2])
-    ms = [m1, m2, m3]
+    # m1 = (df.X == xs[0])
+    # m2 = (df.X == xs[1])
+    # m3 = (df.X == xs[2])
+    # ms = [m1, m2, m3]
+    cs_list = ['blue', 'green', 'red', 'yellow', 'purple']
+    ms = []
+    for x_ in xs:
+        ms.append(df.X == x_)
     # plotting depends most heavily on whether plotting individual coils
     if plotIndiv == 'combined':
         B = df[ycol].values.astype(float)
@@ -966,11 +970,18 @@ def field_plot(df, ycol, ytype, incTS, plotIndiv, unit):
     else:
         cs_list = [['blue', 'green', 'red'],
                    ['purple', 'lime', 'pink'],
-                   ['cyan', 'darkgreen', 'orange']]
+                   ['cyan', 'darkgreen', 'orange'],
+                   ['aqua', 'crimson', 'gray'],
+                   ['gold', 'fuscia', 'olive'],
+                  ]
         data = []
-        ycols_PS = [1, 2, 3]
+        ycols_PS = set()
+        for col in df.columns:
+            if 'solcalc_' in col:
+                ycols_PS.add(int(col.split('_')[-1]))
+        ycols_PS = list(ycols_PS)
         ycols_TS = ['']
-        for yc, cs in zip(ycols_PS, cs_list):
+        for yc, cs in zip(ycols_PS, cs_list[:len(ycols_PS)]):
             yc_full = ycol+f'_solcalc_{yc}'
             B = df[yc_full].values.astype(float)
             if unit == 'Tesla':
