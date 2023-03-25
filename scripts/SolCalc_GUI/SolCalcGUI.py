@@ -328,10 +328,11 @@ def update_geom_data(n_clicks_calc, n_clicks_edit, edit_timestamp, conductor_key
             # available coil_nums
             CNs = [r['Coil_Num'] for r in rows_edit]
             # add row, filled with previous row
-            if n_clicks_edit > 0:
-                new_row = {c['id']: rows_edit[-1][c['name']] if c['name'] != 'Coil_Num' else rows_edit[-1][c['name']]+1 for c in cols_edit}
-                rows_edit.append(new_row)
-                CNs.append(CNs[-1] + 1)
+            if ctx.triggered_id == 'editable-table-button':
+                if n_clicks_edit > 0:
+                    new_row = {c['id']: rows_edit[-1][c['name']] if c['name'] != 'Coil_Num' else rows_edit[-1][c['name']]+1 for c in cols_edit}
+                    rows_edit.append(new_row)
+                    CNs.append(CNs[-1] + 1)
             # First check for consistent rows
             # loop through to check for any that should be removed
             rows_edit_cond_updated = []
