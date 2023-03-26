@@ -793,10 +793,10 @@ def axial_field_plot(df, xvar):
     # plot requirements related things
     # FIXME!
     # TEMPORARY HARD CODE
-    PS2_dBz_trace1 = go.Scatter(x=x_func(PS2_z_range), y=[0.,0.], mode='lines',
+    PS2_dBz_trace1 = go.Scatter(x=x_func(np.array(PS2_z_range)), y=[0.,0.], mode='lines',
                                 line=dict(dash='dashdot', color='black', width=1,),
                                 name=f'PS2 dB{xvar}/d{xvar} < 0.0 T/m for R <= 0.5 m')
-    TS1_dBz_trace1 = go.Scatter(x=x_func(TS1_z_range), y=[-0.02,-0.02], mode='lines',
+    TS1_dBz_trace1 = go.Scatter(x=x_func(np.array(TS1_z_range)), y=[-0.02,-0.02], mode='lines',
                                 line=dict(dash='dash', color='cyan', width=1,),
                                 name=f'TS1 dB{xvar}/d{xvar} <= -0.02 T/m for R <= 0.15 m')
     # point values
