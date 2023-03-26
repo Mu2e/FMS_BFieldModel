@@ -1,4 +1,5 @@
 import sys
+import base64
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -27,6 +28,12 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 resistivities_dict = {'Cu (20C)': rho_Cu, 'Cu (77K, calc.)': rho_Cu_77K,
                       'Cu (77K, optimistic)': rho_Cu_77K_approx, 'S.C.': rho_SC}
 res_keys = sorted(resistivities_dict.keys())
+
+# load decoded images (diagrams)
+image_dir = helicalc_dir + 'scripts/SolCalc_GUI/assets/'
+encoded_image1 = base64.b64encode(open(image_dir+'mu2e_solenoid_1_layer_helicalc.png', 'rb').read())
+encoded_image2 = base64.b64encode(open(image_dir+'mu2e_solenoid_multilayer.png', 'rb').read())
+encoded_image3 = base64.b64encode(open(image_dir+'mu2e_solenoid_SolCalc_J.png', 'rb').read())
 
 # color coding for regions
 region_key = html.Div([html.Span("PS1, ", style={"color": "rgba(0, 256, 0, 1.0)"}),
@@ -96,11 +103,25 @@ app.layout = html.Div([
         dcc.Graph(id='coils-plot'),
         ], open=False,),
     html.H2('Coil Geometries'),
-    html.H3('Diagram'),
+    html.H3('Diagrams'),
     html.Details([
         html.Summary(''),
+        html.Div(html.P([
+            'SolCalc does a careful accounting of the stabilizer and insulation (see: L, Ro, pitch).', html.Br(),
+            'However, when it is time to calculate an ideal solenoid, SolCalc treats the entire cable cross', html.Br(),
+            'section with area A as having a uniform current density J=I_tot/A.', html.Br(),])),
+        html.Div([
+            # html.Img(src=image_dir+'mu2e_solenoid_1_layer_helicalc.png'),
+            # html.Img(src=image_dir+'mu2e_solenoid_multilayer.png'),
+            # html.Img(src=image_dir+'mu2e_solenoid_SolCalc.png'),
+            # html.Img(src=app.get_asset_url('mu2e_solenoid_1_layer_helicalc.png')),
+            # html.Img(src=app.get_asset_url('mu2e_solenoid_multilayer.png')),
+            # html.Img(src=app.get_asset_url('mu2e_solenoid_SolCalc.png')),
+            html.Img(src='data:image/png;base64,{}'.format(encoded_image1.decode()), style={'width':'38%','display':'inline-block'}),
+            html.Img(src='data:image/png;base64,{}'.format(encoded_image2.decode()), style={'width':'31%','display':'inline-block'}),
+            html.Img(src='data:image/png;base64,{}'.format(encoded_image3.decode()), style={'width':'30%','display':'inline-block'}),
+        ], style={'display':'inline-block'}),
                  ], open=False),
-    # ADD DIAGRAM HERE
     # tables
     html.H3('Editable Parameters'),
     html.Details([
@@ -770,6 +791,14 @@ def axial_field_plot(df, xvar):
                                     name=f'R = {r:0.2f}'
                                    ))
     # plot requirements related things
+    # FIXME!
+    # TEMPORARY HARD CODE
+    PS2_dBz_trace1 = go.Scatter(x=x_func(PS2_z_range), y=[0.,0.], mode='lines',
+                                line=dict(dash='dashdot', color='black', width=1,),
+                                name=f'PS2 dB{xvar}/d{xvar} < 0.0 T/m for R <= 0.5 m')
+    TS1_dBz_trace1 = go.Scatter(x=x_func(TS1_z_range), y=[-0.02,-0.02], mode='lines',
+                                line=dict(dash='dash', color='cyan', width=1,),
+                                name=f'TS1 dB{xvar}/d{xvar} <= -0.02 T/m for R <= 0.15 m')
     # point values
     # PS1_Bz_trace1 = go.Scatter(x=[x_func(z_PS1_Bz_min), ], y=[PS1_Bz_min + 0.2,],
     #                            name=f'Minimum Field @ s={s_PS1_Bz_min:0.2f} m<br>Bz = {PS1_Bz_min:0.2f} T',
@@ -884,7 +913,7 @@ def axial_field_plot(df, xvar):
     ####
     # add all traces to layout
     #data = [PS1_Bz_trace1, PS2_Bz_trace1, TS1_Bz_trace1, TS_allow_trace1, TS_allow_trace2] + Bz_traces
-    data = [] + Bz_traces
+    data = [PS2_dBz_trace1, TS1_dBz_trace1] + Bz_traces
     # layout should work with all configurations
     layout = go.Layout(
         title=f'PS Field Gradient Requirements (y==0.0) m',
