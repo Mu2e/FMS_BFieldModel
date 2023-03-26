@@ -19,12 +19,12 @@ from mu2e.mu2eplots import mu2e_plot3d
 plotdir = helicalc_data+'plots/helicalc/validation/DS8/optimize/'
 
 # standard
-# data_file = helicalc_data+'Bmaps/helicalc_validation/Mau13.DS8_region_plane.standard-helicalc.coil_63_full.pkl'
+# data_file = helicalc_data+'Bmaps/helicalc_validation/Mu2e_V13.DS8_region_plane.standard-helicalc.coil_63_full.pkl'
 # radius optimize
 deltaR=-2.313e-3
 deltaR_mm = deltaR * 1e3
 ###data_file = helicalc_data+f'Bmaps/helicalc_validation/optimize/Mau14.DS1_region_plane_sparse.coil_dR_{deltaR_mm:0.3f}mm-helicalc.coil_56_full.pkl'
-data_file = helicalc_data+f'Bmaps/helicalc_validation/optimize/Mau13.DS8_region_plane.coil_dR_{deltaR_mm:0.3f}mm-helicalc.coil_63_full.pkl'
+data_file = helicalc_data+f'Bmaps/helicalc_validation/optimize/Mu2e_V13.DS8_region_plane.coil_dR_{deltaR_mm:0.3f}mm-helicalc.coil_63_full.pkl'
 
 df = pd.read_pickle(data_file)
 

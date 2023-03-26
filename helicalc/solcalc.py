@@ -115,7 +115,8 @@ class SolCalcIntegrator(object):
         self.lib = lib
         self.dev = dev
         # rotations!
-        self.XYZ_rot = geom_coil[[f'rot{i:d}' for i in [0,1,2]]].values
+        #self.XYZ_rot = geom_coil[[f'rot{i:d}' for i in [0,1,2]]].values
+        self.XYZ_rot = np.array([geom_coil[f'rot{i:d}'] for i in [0,1,2]])
         self.XYZ_rot_rad = np.radians(self.XYZ_rot)
         self.mu2e_to_coil = Rotation.from_euler('XYZ', -self.XYZ_rot_rad)
         self.coil_to_mu2e = self.mu2e_to_coil.inv()
@@ -286,7 +287,7 @@ class SolCalcIntegrator(object):
 
         return self.df
 
-    def save_grid_calc(self, savetype='pkl', savename='data/Mau13.PS_region.standard.coil0', all_solcalc_cols=False):
+    def save_grid_calc(self, savetype='pkl', savename='data/Mu2e_V13.PS_region.standard.coil0', all_solcalc_cols=False):
         # determine which columns to save
         i = int(round(self.geom_coil.Coil_Num))
         cols = ['X', 'Y', 'Z']
@@ -297,6 +298,9 @@ class SolCalcIntegrator(object):
             else:
                 if f'solcalc_{i}' in col:
                     cols.append(col)
+        # check for Hall probe label
+        if "HP" in self.df.columns:
+            cols.append("HP")
         # save
         df_to_save = self.df[cols]
         if savetype == 'pkl':

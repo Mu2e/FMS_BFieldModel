@@ -14,7 +14,7 @@ output_dir = helicalc_data+'Bmaps/helicalc_validation/'
 #save_name = output_dir+'Mau14.DS1_region.standard-helicalc.coil_56_full.pkl'
 # y=0 plane
 save_name = output_dir+'Mau14.DS8_region_plane.b30-helicalc.coil_63_full.pkl'
-# save_name = output_dir+'Mau13.DS8_region_plane.standard-helicalc.coil_63_full.pkl'
+# save_name = output_dir+'Mu2e_V13.DS8_region_plane.standard-helicalc.coil_63_full.pkl'
 
 # load coil geometry
 paramdir = helicalc_dir + 'dev/params/'

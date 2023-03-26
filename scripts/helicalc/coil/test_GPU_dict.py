@@ -42,6 +42,6 @@ if __name__=='__main__':
             #                         interlayer_connect=True)
             # myCoil.integrate_grid(df_, N_batch=N_calc, tqdm=tqdm)
             # myCoil.save_grid_calc(savetype='pkl', savename=f'Bmaps/helicalc_partial/tests/'+
-            #               f'Mau13.{reg}_region.test-helicalc.'+
+            #               f'Mu2e_V13.{reg}_region.test-helicalc.'+
             #               f'coil_{info["coil"]}_layer_{info["layer"]}',
             #               all_helicalc_cols=False)

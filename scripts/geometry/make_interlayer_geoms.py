@@ -146,7 +146,9 @@ def find_euler2_interlayer(df_il, weights=weights_default):
 if __name__=='__main__':
     # which version?
     # version = 13
-    version = 14
+    # version = 14
+    # version = '13_altDS11'
+    version = 15
     # load coils
     paramdir = helicalc_dir + 'dev/params/'
     paramname = f'Mu2e_V{version}'

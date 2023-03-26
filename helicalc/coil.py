@@ -15,7 +15,7 @@ from .tools import *
 
 class CoilIntegrator(object):
     def __init__(self, geom_coil, dxyz, layer=1, int_func=tc.trapz, lib=tc, dev=0, interlayer_connect=True,
-                 j_rho_func=None):
+                 j_rho_func=None, adaptive_pitch=True):
         if layer > geom_coil.N_layers:
             raise ValueError(f'Layer "{layer}" invalid. Please select layer in the range [1, {int(geom_coil.N_layers)}]')
         # set correct device
@@ -33,18 +33,35 @@ class CoilIntegrator(object):
         # phi lims
         if layer == geom_coil.N_layers:
             # in last layer, wind until phi1 reached
+            # FIXME! This only works assuming outer layer has helicity=+1.
+            # This is true for Mu2e but not guaranteed to be generally true.
+            # It also assumes phi1 < phi0, else this only works for helicity=-1.
             self.last_turn_rad = 2*np.pi - abs(geom_coil.phi1-geom_coil.phi0)
-            self.phi_i = geom_coil.phi0
-            self.phi_f = geom_coil.phi0 + self.helicity*(2*np.pi*(geom_coil.N_turns-1) + self.last_turn_rad)
+            if geom_coil.N_layers < 2:
+                self.phi_i = geom_coil.phi0
+            else:
+                # FIXME!
+                if np.isclose(geom_coil.N_turns, int(geom_coil.N_turns)):
+                    self.phi_i = geom_coil.phi0
+                else:
+                    self.phi_i = geom_coil.phi0 - (1 - geom_coil.N_turns % 1) * 2*np.pi
+            self.phi_f = self.phi_i + self.helicity*(2*np.pi*(geom_coil.N_turns-1) + self.last_turn_rad)
         else:
-            self.phi_i = geom_coil.phi0
-            self.phi_f = geom_coil.phi0 + self.helicity*(2*np.pi*geom_coil.N_turns)
+            # update phi_i, if N_turns is not an integer
+            # this ensures negative helicity layer 1 actually has input at the location of the bus bar
+            if np.isclose(geom_coil.N_turns, int(geom_coil.N_turns)):
+                self.phi_i = geom_coil.phi0
+            else:
+                self.phi_i = geom_coil.phi0 - (1 - geom_coil.N_turns % 1) * 2*np.pi
+            self.phi_f = self.phi_i + self.helicity*(2*np.pi*geom_coil.N_turns)
             if interlayer_connect:
                 if self.helicity < 0:
                     # connect brick at phi_i
                     self.phi_i = self.phi_i - np.radians(36.)
                 else:
                     # connect brick at phi_f
+                    # FIXME! I think this should maybe be phi_i = phi_i + 36 deg.
+                    # Not needed for Mu2e, but should correct this.
                     self.phi_f = self.phi_f - np.radians(36.)
         zeta_lims = [geom_coil.zeta0, geom_coil.zeta1]
         # phi_lims = [geom_coil.phi_i, geom_coil.phi_f]
@@ -72,6 +89,11 @@ class CoilIntegrator(object):
             #self.z_start = self.z_ref - geom_coil.L - 2*geom_coil.t_ci
         else:
             self.z_start = self.z_ref
+        # adaptive or fixed pitch?
+        if adaptive_pitch:
+            self.pitch_bar = geom_coil.pitch_bar_2
+        else:
+            self.pitch_bar = geom_coil.pitch_bar
         # setup integration steps
         self.RHO, self.ZETA, self.PHI = lib.meshgrid(self.rhos,self.zetas,self.phis, indexing='ij')
         self.SINPHI = lib.sin(self.PHI)
@@ -81,7 +103,7 @@ class CoilIntegrator(object):
         self.RHOSINPHI = self.RHO * self.SINPHI
         self.HRHOCOSPHI = self.helicity * self.RHOCOSPHI
         self.HRHOSINPHI = self.helicity * self.RHOSINPHI
-        self.ZTERM = self.z_start + self.ZETA + abs(self.PHI - self.phi_i) * geom_coil.pitch_bar + geom_coil.t_gi
+        self.ZTERM = self.z_start + self.ZETA + abs(self.PHI - self.phi_i) * self.pitch_bar + geom_coil.t_gi
         # varying or constant j?
         self.j_rho_func = j_rho_func
         if j_rho_func is None:
@@ -121,7 +143,8 @@ class CoilIntegrator(object):
         self.lib = lib
         self.dev = dev
         # rotation function
-        self.XYZ_rot = geom_coil[[f'rot{i:d}' for i in [0,1,2]]].values
+        # self.XYZ_rot = geom_coil[[f'rot{i:d}' for i in [0,1,2]]].values
+        self.XYZ_rot = np.array([geom_coil[f'rot{i:d}'] for i in [0,1,2]])
         self.XYZ_rot_rad = np.radians(self.XYZ_rot)
         self.mu2e_to_coil = Rotation.from_euler('XYZ', -self.XYZ_rot_rad)
         self.coil_to_mu2e = self.mu2e_to_coil.inv()
@@ -143,7 +166,7 @@ class CoilIntegrator(object):
         # calculate repeated calculations
         RX = rx(self.RHO, self.COSPHI, x0)
         RY = ry(self.RHO, self.SINPHI, y0)
-        RZ = rz(self.ZETA, self.PHI, self.phi_i, self.geom_coil.pitch_bar, self.geom_coil.t_gi, self.z_start, z0)
+        RZ = rz(self.ZETA, self.PHI, self.phi_i, self.pitch_bar, self.geom_coil.t_gi, self.z_start, z0)
         # test saving RX, RY, RZ to the object
         self.RX = RX
         self.RY = RY
@@ -155,7 +178,7 @@ class CoilIntegrator(object):
         for integrand_func in [helix_integrand_Bx, helix_integrand_By, helix_integrand_Bz]:
             integrand_xyz = self.mu_fac * integrand_func(RX, RY, RZ, R2_32, self.RHO, self.COSPHI,
                                                          self.SINPHI, self.helicity,
-                                                         self.geom_coil.pitch_bar, self.geom_coil.L)
+                                                         self.pitch_bar, self.geom_coil.L)
             result.append(trapz_3d(self.rhos, self.zetas, self.phis, integrand_xyz, self.int_func).item())
         B_vec = np.array(result)
         # rotate vector back to mu2e coordinates
@@ -183,7 +206,7 @@ class CoilIntegrator(object):
         # int_func must have params (x, y, z, x0, y0, z0)
         for integrand_func in [helix_integrand_Bx_min, helix_integrand_By_min, helix_integrand_Bz_min]:
             integrand_xyz = self.mu_fac * integrand_func(RX, RY, RZ, R2_32, self.HRHOCOSPHI,
-                                                         self.HRHOSINPHI, self.geom_coil.pitch_bar)
+                                                         self.HRHOSINPHI, self.pitch_bar, self.RHO)
             result.append(trapz_3d(self.rhos, self.zetas, self.phis, integrand_xyz, self.int_func).item())
         B_vec = np.array(result)
         # rotate vector back to mu2e coordinates
@@ -218,7 +241,7 @@ class CoilIntegrator(object):
             # int_func must have params (x, y, z, x0, y0, z0)
             for integrand_func in [helix_integrand_Bx_min, helix_integrand_By_min, helix_integrand_Bz_min]:
                 integrand_xyz = self.mu_fac * integrand_func(RX, RY, RZ, R2_32, self.HRHOCOSPHI,
-                                                             self.HRHOSINPHI, self.geom_coil.pitch_bar)
+                                                             self.HRHOSINPHI, self.pitch_bar, self.RHO)
                 result.append(trapz_3d(self.rhos, self.zetas, self.phis, integrand_xyz, self.int_func))
             if self.lib is tc:
                 B_vec = tc.stack(result)
@@ -245,13 +268,13 @@ class CoilIntegrator(object):
             z0_vec = tc.from_numpy(z0_vec).cuda()
         RX = rx(self.RHO[None,...], self.COSPHI[None,...], x0_vec[:,None,None,None])
         RY = ry(self.RHO[None,...], self.SINPHI[None,...], y0_vec[:,None,None,None])
-        RZ = rz(self.ZETA[None,...], self.PHI[None,...], self.phi_i, self.geom_coil.pitch_bar, self.geom_coil.t_gi, self.z_start, z0_vec[:,None,None,None])
+        RZ = rz(self.ZETA[None,...], self.PHI[None,...], self.phi_i, self.pitch_bar, self.geom_coil.t_gi, self.z_start, z0_vec[:,None,None,None])
         R2_32 = (RX**2+RY**2+RZ**2)**(3/2)
         result = []
         # int_func must have params (x, y, z, x0, y0, z0)
         for integrand_func in [helix_integrand_Bx, helix_integrand_By, helix_integrand_Bz]:
             integrand_xyz = self.mu_fac_vec * integrand_func(RX, RY, RZ, R2_32, self.RHO[None,...], self.COSPHI[None,...],
-                                                             self.SINPHI[None,...], self.helicity, self.geom_coil.pitch_bar, self.geom_coil.L)
+                                                             self.SINPHI[None,...], self.helicity, self.pitch_bar, self.geom_coil.L)
             result.append(trapz_3d(self.rhos, self.zetas, self.phis, integrand_xyz, self.int_func).cpu())
         B_vecs = np.array(result)
         # rotate vector back to mu2e coordinates
@@ -280,7 +303,7 @@ class CoilIntegrator(object):
         # int_func must have params (x, y, z, x0, y0, z0)
         for integrand_func in [helix_integrand_Bx_min, helix_integrand_By_min, helix_integrand_Bz_min]:
             integrand_xyz = self.mu_fac_vec * integrand_func(RX, RY, RZ, R2_32, self.HRHOCOSPHI[None,...],
-                                                             self.HRHOSINPHI[None,...], self.geom_coil.pitch_bar)
+                                                             self.HRHOSINPHI[None,...], self.pitch_bar, self.RHO[None,...])
             result.append(trapz_3d(self.rhos, self.zetas, self.phis, integrand_xyz, self.int_func).cpu())
         if self.lib is tc:
             B_vecs = tc.stack(result).cpu()
@@ -353,7 +376,7 @@ class CoilIntegrator(object):
 
         return self.df
 
-    def save_grid_calc(self, savetype='pkl', savename='Bmaps/helicalc_partial/Mau13.DS_region.standard-helicalc.coil56', all_helicalc_cols=False):
+    def save_grid_calc(self, savetype='pkl', savename='Bmaps/helicalc_partial/Mu2e_V13.DS_region.standard-helicalc.coil56', all_helicalc_cols=False):
         # determine which columns to save
         i = int(round(self.geom_coil.Coil_Num))
         cols = ['X', 'Y', 'Z']
@@ -364,6 +387,9 @@ class CoilIntegrator(object):
             else:
                 if f'helicalc_c{i}_l{self.layer}' in col:
                     cols.append(col)
+        # check for Hall probe label
+        if "HP" in self.df.columns:
+            cols.append("HP")
         # save
         df_to_save = self.df[cols]
         if savetype == 'pkl':

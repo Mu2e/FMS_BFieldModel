@@ -2,26 +2,39 @@ import numpy as np
 import pandas as pd
 from scipy.constants import mu_0
 
-def read_solenoid_geom_combined(params_dir, geom_name, sep=',', skiprows=1):
+def read_solenoid_geom_combined(params_dir, geom_name, sep=',', skiprows=1, parse_config_name=False):
     # coils
     cols_coil = ["Coil_Num","Ri", "Ro", "L", "x", "y", "z" , "rot0", "rot1", "rot2",
                  "I_tot", "N_layers", "N_turns", "N_turns_tot", "I_turn", "helicity"]
     cols_coil_rescale = ["Ri", "Ro", "L", "x", "y", "z"]
-
-    Coils = pd.read_csv(params_dir+geom_name+"_coil.txt", names=cols_coil, sep=sep, skiprows=skiprows)
+    dict_dtype = {c: float for c in cols_coil}
+    # config name? Mu2eII dev
+    if parse_config_name:
+        cols_coil.append('conductor_config')
+        dict_dtype['conductor_config'] = str
+    Coils = pd.read_csv(params_dir+geom_name+"_coil.txt", names=cols_coil, sep=sep, skiprows=skiprows, usecols=cols_coil, dtype=dict_dtype)
     for col in cols_coil_rescale:
         Coils[col] = Coils[col] / 1e3
     # conductor
     cols_cond = ["h_cable", "w_cable", "h_sc", "w_sc", "t_gi", "t_ci", "t_il", "phi0", "phi1"]
     cols_cond_rescale = ["h_cable", "w_cable", "h_sc", "w_sc", "t_gi", "t_ci", "t_il"]
-
-    Conductor = pd.read_csv(params_dir+geom_name+"_conductor.txt", names=cols_cond, sep=sep, skiprows=skiprows)
+    dict_dtype = {c: float for c in cols_cond}
+    # config name? Mu2eII dev
+    if parse_config_name:
+        cols_cond.append('conductor_config')
+        dict_dtype['conductor_config'] = str
+    Conductor = pd.read_csv(params_dir+geom_name+"_conductor.txt", names=cols_cond, sep=sep, skiprows=skiprows, usecols=cols_cond, dtype=dict_dtype)
     for col in cols_cond_rescale:
         Conductor[col] = Conductor[col] / 1e3
 
     # integration limits zeta
     Conductor['zeta0'] = (Conductor.w_cable-Conductor.w_sc)/2. + Conductor.t_ci
     Conductor['zeta1'] = Conductor.zeta0 + Conductor.w_sc
+
+    # make sure conductor configs consistent between files, Mu2eII dev
+    if parse_config_name:
+        if not np.all(np.equal(Coils.conductor_config.values, Conductor.conductor_config.values)):
+            raise ValueError('Coil and Conductor files inconsistent sets for different conductor_config. Please fix the files.')
 
     df = pd.concat([Coils, Conductor], axis=1)
 
@@ -41,7 +54,7 @@ def read_solenoid_geom_combined(params_dir, geom_name, sep=',', skiprows=1):
     df['pitch_2'] = (df.L - df.w_cable - 2.*df.t_gi) / df.N_turns
     # df['pitch'] = df.L / df.N_turns
     df['pitch_bar'] = df['pitch'] / (2*np.pi) # follows OPERA
-    # df['pitch_bar'] = df['pitch_2'] / (2*np.pi)
+    df['pitch_bar_2'] = df['pitch_2'] / (2*np.pi)
 
     # integration limits
     # df['phi_i']

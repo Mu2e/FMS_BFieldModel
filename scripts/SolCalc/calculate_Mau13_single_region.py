@@ -6,7 +6,7 @@ import numpy as np
 from helicalc import helicalc_dir, helicalc_data
 from helicalc.solcalc import *
 from helicalc.geometry import read_solenoid_geom_combined
-from helicalc.tools import generate_cartesian_grid_df
+from helicalc.tools import generate_cartesian_grid_df, generate_cylindrical_grid_df
 from helicalc.constants import (
     PS_grid,
     TSu_grid,
@@ -14,18 +14,23 @@ from helicalc.constants import (
     DS_grid,
     PStoDumpArea_grid,
     ProtonDumpArea_grid,
-    DS_cyl2d_grid_5mm
+    DS_cyl2d_grid_5mm,
+    DS_FMS_cyl_grid,
+    DS_FMS_cyl_grid_SP,
 )
 
 # paramdir = '/home/ckampa/coding/helicalc/dev/params/'
 paramdir = helicalc_dir + 'dev/params/'
-paramname = 'Mu2e_V13'
+# paramname = 'Mu2e_V13'
+paramname = 'Mu2e_V13_altDS11'
 datadir = helicalc_data+'Bmaps/SolCalc_partial/'
 
 regions = {'PS': PS_grid, 'TSu': TSu_grid, 'TSd': TSd_grid, 'DS': DS_grid,
            'PStoDumpArea': PStoDumpArea_grid,
            'ProtonDumpArea': ProtonDumpArea_grid,
-           'DSCyl2D': DS_cyl2d_grid_5mm}
+           'DSCyl2D': DS_cyl2d_grid_5mm,
+           'DSCylFMS': DS_FMS_cyl_grid,
+           'DSCylFMSAll': [DS_FMS_cyl_grid, DS_FMS_cyl_grid_SP]}
 
 if __name__=='__main__':
     # parse command line arguments
@@ -33,7 +38,7 @@ if __name__=='__main__':
     parser.add_argument('-r', '--Region',
                         help='Which region of Mu2e to calculate? '+
                         '["PS"(default), "TSu", "TSd", "DS", "PStoDumpArea"'+
-                        ', "ProtonDumpArea", "DSCyl2D"]')
+                        ', "ProtonDumpArea", "DSCyl2D", "DSCylFMS", "DSCylFMSAll"]')
     parser.add_argument('-t', '--Testing',
                         help='Calculate using small subset of coils?'+
                         '"y"(default)/"n"')
@@ -64,9 +69,12 @@ if __name__=='__main__':
     # step size for integrator
     drz = np.array([5e-3, 1e-2])
     # create grid
-    df = generate_cartesian_grid_df(regions[reg])
+    if reg in ['DSCylFMS', 'DSCylFMSAll']:
+        df = generate_cylindrical_grid_df(regions[reg], dec_round=9)
+    else:
+        df = generate_cartesian_grid_df(regions[reg])
     # define base save name
-    base_name = f'Mau13.SolCalc.{reg}_region.standard'
+    base_name = f'{paramname}.SolCalc.{reg}_region.standard'
     # load geometry
     geom_df_mu2e = read_solenoid_geom_combined(paramdir,paramname)
     # TESTING (only a few coils)

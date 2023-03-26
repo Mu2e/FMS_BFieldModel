@@ -23,7 +23,7 @@ data_file = helicalc_data+'Bmaps/helicalc_validation/Mau14.DS8_region_plane.b30-
 # radius optimize
 # deltaR=-2.313e-3
 # deltaR_mm = deltaR * 1e3
-# data_file = helicalc_data+f'Bmaps/helicalc_validation/optimize/Mau13.DS8_region_plane.coil_dR_{deltaR_mm:0.3f}mm-helicalc.coil_63_full.pkl'
+# data_file = helicalc_data+f'Bmaps/helicalc_validation/optimize/Mu2e_V13.DS8_region_plane.coil_dR_{deltaR_mm:0.3f}mm-helicalc.coil_63_full.pkl'
 
 df = pd.read_pickle(data_file)
 

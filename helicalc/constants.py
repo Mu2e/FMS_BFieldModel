@@ -29,6 +29,31 @@ TSd_grid = {'X0':-5.096, 'Y0':-1.200, 'Z0':-0.829,
 DS_grid = {'X0':-5.096, 'Y0':-1.200, 'Z0':3.071,
            'nX':97, 'nY':97, 'nZ':521,
            'dX':0.025, 'dY':0.025, 'dZ':0.025}
+# FMS big propeller measurements
+# using the values currently set up in Mu2E field fitting. But this was
+# defined based on Mau13 grid points, so we could adjust if needed.
+Rs_BP = [0.044, 0.319, 0.488, 0.656, 0.800]
+labels_BP = ['BP1', 'BP2', 'BP3', 'BP4', 'BP5']
+#Z0_BP = 4.221 # number from original model fit / Mau13
+Z0_BP = 4.250 # more realistic number for clearance near TS. This is upstream OPA
+Phi0_BP = 0.
+
+DS_FMS_cyl_grid = {'R0': Rs_BP, 'Phi0': Phi0_BP, 'Z0': Z0_BP,
+                   'nR': None, 'nPhi': 16, 'nZ': 214,
+                   'dR': None, 'dPhi': 2*np.pi/16, 'dZ':0.05,
+                   'XOffset': -3.904, 'HP_labels': labels_BP}
+
+Rs_SP = np.array([0., 0.054, 0.095])
+labels_SP = ['SP1', 'SP2', 'SP3']
+# fixed distance from BP to small propeler. Check number!
+Z0_SP = Z0_BP - 1.335
+Phi0_SP = Phi0_BP + np.pi/4.
+DS_FMS_cyl_grid_SP = {'R0': Rs_SP, 'Phi0': Phi0_SP, 'Z0': Z0_SP,
+                      'nR': None, 'nPhi': 16, 'nZ': 214,
+                      'dR': None, 'dPhi': 2*np.pi/16, 'dZ':0.05,
+                      'XOffset': -3.904, 'HP_labels': labels_SP}
+
+
 # additions outside solenoid regions
 # note that for now we do not do "flipy", so should include Y<0 in grid
 PStoDumpArea_grid = {'X0':0.004, 'Y0':-5.500, 'Z0':-14.929,
@@ -77,3 +102,6 @@ dxyz_straight_bar_dict = {1: np.array([1e-3,3e-3, 5e-3]),
 # dz (dphi) assumes R=1. Adjust this when using if this is not the case.
 dxyz_arc_bar_dict = {1: np.array([1e-3,3e-3, 5e-3]),
                      2: np.array([1e-3,2e-3, 5e-3])}
+
+## RADIAL 1D
+dr_radial_dict = {1: 1e-3}

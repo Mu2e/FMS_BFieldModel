@@ -10,6 +10,10 @@ def trapz_3d(xs, ys, zs, integrand_xyz, int_func=tc.trapz):
 def trapz_2d(rs, zs, integrand_rz, int_func=tc.trapz):
     return int_func(int_func(integrand_rz, axis=-1, x=zs), axis=-1, x=rs)
 
+# 1D needed for auxiliary_integrators.RadialStraightIntegrator1D
+def trapz_1d(rs, integrand_r, int_func=np.trapz):
+    return int_func(integrand_r, axis=-1, x=rs)
+
 # helpful functions
 # maybe move into CoilIntegrator class? FIXME!
 ## HELIX
@@ -62,12 +66,15 @@ def rz_min(ZTERM, z):
     #return z - (zeta + (phi-phi0) * pitch_bar - L/2 + t_gi)
     return z - ZTERM
 
-def helix_integrand_Bx_min(RX, RY, RZ, R2_32, HRHOCOSPHI, HRHOSINPHI, pitch_bar):
-    return (HRHOCOSPHI * RZ - pitch_bar * RY) / R2_32
-def helix_integrand_By_min(RX, RY, RZ, R2_32, HRHOCOSPHI, HRHOSINPHI, pitch_bar):
-    return (HRHOSINPHI * RZ + pitch_bar * RX) / R2_32
+# FIXME! Is the second term in Bx, By correct? Missing factor of rho?
+def helix_integrand_Bx_min(RX, RY, RZ, R2_32, HRHOCOSPHI, HRHOSINPHI, pitch_bar, RHO):
+    # return (HRHOCOSPHI * RZ - pitch_bar * RY) / R2_32 # incorrect
+    return (HRHOCOSPHI * RZ - pitch_bar * RHO * RY) / R2_32 # correct
+def helix_integrand_By_min(RX, RY, RZ, R2_32, HRHOCOSPHI, HRHOSINPHI, pitch_bar, RHO):
+    # return (HRHOSINPHI * RZ + pitch_bar * RX) / R2_32 # incorrect
+    return (HRHOSINPHI * RZ + pitch_bar * RHO * RX) / R2_32 # correct
 
-def helix_integrand_Bz_min(RX, RY, RZ, R2_32, HRHOCOSPHI, HRHOSINPHI, pitch_bar):
+def helix_integrand_Bz_min(RX, RY, RZ, R2_32, HRHOCOSPHI, HRHOSINPHI, pitch_bar, RHO):
     return - (HRHOSINPHI * RY + HRHOCOSPHI * RX) / R2_32
 
 ####
@@ -106,3 +113,19 @@ def straight_integrand_Bx(RX, RY, R2_32):
     return -RY/R2_32
 def straight_integrand_By(RX, RY, R2_32):
     return RX/R2_32
+
+####
+
+## RADIAL STRAIGHT INTEGRATOR (1D)
+def rx_r1d(rho, COSPHIC, x):
+    return x - rho*COSPHIC
+def ry_r1d(rho, SINPHIC, y):
+    return y - rho*SINPHIC
+def rz_r1d(rho, zc, z):
+    return z - zc
+
+def radial_integrand_Bphi(RPHI, RZ, R2_32):
+    return -RZ/R2_32
+
+def radial_integrand_Bz(RPHI, RZ, R2_32):
+    return RPHI/R2_32

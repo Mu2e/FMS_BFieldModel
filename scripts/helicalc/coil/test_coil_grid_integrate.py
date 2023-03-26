@@ -47,7 +47,7 @@ print('Integrating!')
 
 myCoil.integrate_grid(df_, N_batch=N_calc, tqdm=tqdm)
 myCoil.save_grid_calc(savetype='pkl', savename=f'Bmaps/helicalc_partial/'+
-                      f'Mau13.DS_region.test-helicalc.coil{Coil_Num}_layer{Layer}',
+                      f'{paramname}.DS_region.test-helicalc.coil{Coil_Num}_layer{Layer}',
                       all_helicalc_cols=False)
 
 print('Finished integrating and saving!')

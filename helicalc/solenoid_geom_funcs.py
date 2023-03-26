@@ -35,13 +35,19 @@ def load_all_geoms(version=14, return_dict=True):
     df_str = pd.read_csv(straight_file)
     df_arc = pd.read_csv(arc_file)
     df_arc_tr = pd.read_csv(arc_transfer_file)
+    # radial currents
+    df_DS_coils = df_coils.query('Solenoid == "DS"')
+    df_radial_coils = make_radial_dataframe(df_DS_coils, length=20.,
+                                            busbar_flip=False)
     if return_dict:
         df_dict = {'coils': df_coils, 'interlayers': df_interlayer,
                    'straights': df_str, 'arcs': df_arc,
-                   'arcs_transfer': df_arc_tr}
+                   'arcs_transfer': df_arc_tr,
+                   'radial_coils': df_radial_coils}
         return df_dict
     else:
-        return df_coils, df_interlayer, df_str, df_arc, df_arc_tr
+        return df_coils, df_interlayer, df_str, df_arc, df_arc_tr,\
+         df_radial_coils
 
 # creating other relevant dictionaries
 def make_conductor_dicts(df_dict):
@@ -51,13 +57,14 @@ def make_conductor_dicts(df_dict):
                      'interlayers': gen_arc_allsurface_points,
                      'straights': gen_straight_allsurface_points,
                      'arcs': gen_arc_allsurface_points,
-                     'arcs_transfer': gen_arc_allsurface_points}
+                     'arcs_transfer': gen_arc_allsurface_points,
+                     'radial_coils': get_1d_radial}
     # make a lookup dictionary for which condctor type corresponds to each
     # conductor number
     conductor_dict = {}
     id_column_dict = {}
     for key, df in df_dict.items():
-        if key not in ['coils', 'interlayers']:
+        if key not in ['coils', 'interlayers', 'radial_coils']:
             for v in df['cond N'].values:
                 conductor_dict[str(v)] = key
                 id_column_dict[str(v)] = 'cond N'
@@ -71,10 +78,142 @@ def make_conductor_dicts(df_dict):
             for v in df['cond N'].values:
                 conductor_dict[str(v)+'_il'] = key
                 id_column_dict[str(v)+'_il'] = 'cond N'
+        elif key == 'radial_coils':
+            for v in df['Coil_Num'].values:
+                # v is e.g. "56in" or "56out"
+                conductor_dict[v] = key
+                id_column_dict[v] = 'Coil_Num'
         else:
             raise ValueError(f'Geometry key "{key}" not recognized.')
 
     return generate_dict, conductor_dict, id_column_dict
+
+# radial current dataframe generator (from coils)
+def make_radial_dataframe(df_coils, length=10., busbar_flip=False):
+    df_c = df_coils.copy()
+    # update w and t of s.c. to get pinpointed center
+    df_c.loc[:, 'w_sc'] = 1e-4 # z
+    df_c.loc[:, 'h_sc'] = 1e-4 # radial
+    # setup lists to aggregate info
+    lengths = length * np.ones(2*len(df_c))
+    #x_axis_offsets = x_axis_offset * np.ones(len(df_c))
+    #y_axis_offsets = y_axis_offset * np.ones(len(df_c))
+    coil_nums = []
+    x_axis_offsets = []
+    y_axis_offsets = []
+    x0s = []
+    y0s = []
+    z0s = []
+    #lengths = []
+    Is = []
+    I_flows = []
+    if busbar_flip:
+        Iflow_list = [1., -1.]
+    else:
+        Iflow_list = [-1., 1.]
+    # loop through all coils
+    for row in df_coils.itertuples():
+        cn = row.Coil_Num
+        if np.any(~np.isclose([row.rot0, row.rot1, row.rot2], 0.)):
+            raise ValueError(f"Coil {cn} has a non-zero rotation, which may lead to unexpected results. Radial integrator is designed to work with coils with axis")
+        for end, I_flow in zip(['in', 'out'], Iflow_list):
+            # find location to start radial current
+            xs_, ys_, zs_ = gen_helical_coil_surface_points(df_c, cn, end, surface_num=0, N=1000)
+            x0s.append(np.mean(xs_))
+            y0s.append(np.mean(ys_))
+            z0s.append(np.mean(zs_))
+            # axis offsets are just coil centers (x, y)
+            x_axis_offsets.append(row.x)
+            y_axis_offsets.append(row.y)
+            # add other info
+            coil_nums.append(f'{cn}{end}')
+            I_flows.append(I_flow)
+            Is.append(row.I_turn)
+            #lengths.append(row.L)
+    # make dataframe
+    df = pd.DataFrame({'Coil_Num': coil_nums, 'x0': x0s, 'y0': y0s, 'z0': z0s,
+                       'length': lengths, 'I': Is, 'I_flow': I_flows,
+                       'x_axis_offset': x_axis_offsets, 'y_axis_offset': y_axis_offsets})
+    return df
+
+def get_1d_radial(df, coil_num, nr=3):
+    df_ = df.query(f'Coil_Num == "{coil_num}"').iloc[0]
+    x_axis_offset = df_.x_axis_offset
+    y_axis_offset = df_.y_axis_offset
+    xc = df_.x0 - x_axis_offset
+    yc = df_.y0 - y_axis_offset
+    zc = df_.z0
+    # location
+    phic = np.arctan2(yc, xc)
+    rc = (xc**2 + yc**2)**(1/2)
+    L = df_.length
+    rs = np.linspace(rc, rc+L, nr)
+    xs = rs * np.cos(phic) + x_axis_offset
+    ys = rs * np.sin(phic) + y_axis_offset
+    zs = zc * np.ones_like(xs)
+    pos = np.array([xs, ys, zs])
+    # end points
+    if df_.I_flow > 0:
+        pos_in = pos[:, 0]
+        pos_out = pos[:, -1]
+    else:
+        pos_in = pos[:, -1]
+        pos_out = pos[:, 0]
+    return pos, pos_in, pos_out
+
+def get_many_1d_radials(df, nr=3):
+    # lists to store all busbar information (will become multi-dim np.arrays)
+    xs = []
+    ys = []
+    zs = []
+    cs = []
+    # separate list for in an out points
+    xs_in = []
+    ys_in = []
+    zs_in = []
+    xs_out = []
+    ys_out = []
+    zs_out = []
+    # loop through all arcs, by conductor number
+    for cn in df['Coil_Num']:
+        # get x,y,z for this radial current
+        pos, pos_in, pos_out = get_1d_radial(df, cn, nr=nr)
+        xs_in.append(pos_in[0])
+        ys_in.append(pos_in[1])
+        zs_in.append(pos_in[2])
+        xs_out.append(pos_out[0])
+        ys_out.append(pos_out[1])
+        zs_out.append(pos_out[2])
+        x_, y_, z_ = pos
+        cs_ = np.ones_like(x_)
+        # pad x_, y_, z_ for transparency between bars
+        x_ = np.insert(np.insert(x_, 0, x_[0], axis=0), -1, x_[-1], axis=0)
+        y_ = np.insert(np.insert(y_, 0, y_[0], axis=0), -1, y_[-1], axis=0)
+        z_ = np.insert(np.insert(z_, 0, z_[0], axis=0), -1, z_[-1], axis=0)
+        cs_ = np.insert(np.insert(cs_, 0, cs_[0], axis=0), -1, cs_[-1], axis=0)
+        # color array, with padded x,y,z flipped to zero (will set transparent)
+        #cs_ = np.ones_like(x_)
+        cs_[0] = 0
+        cs_[-1] = 0
+        # add to lists
+        xs.append(x_)
+        ys.append(y_)
+        zs.append(z_)
+        cs.append(cs_)
+    # create numpy arrays from gathered results
+    xs = np.concatenate(xs)
+    ys = np.concatenate(ys)
+    zs = np.concatenate(zs)
+    cs = np.concatenate(cs)
+    # arrays for out and in
+    xs_in = np.array(xs_in)
+    ys_in = np.array(ys_in)
+    zs_in = np.array(zs_in)
+    xs_out = np.array(xs_out)
+    ys_out = np.array(ys_out)
+    zs_out = np.array(zs_out)
+
+    return xs, ys, zs, cs, xs_in, ys_in, zs_in, xs_out, ys_out, zs_out
 
 # Coils (idea cylinders)
 def cylinder(r, h, xc=0, yc=0, zc=0, pitch=0., yaw=0., roll=0.,
@@ -606,6 +745,7 @@ def gen_helical_coil_surface_points(df, coil_num, conductor_end='out',
     h = df_.h_sc # radial
     phi0 = df_.phi0
     phi1 = df_.phi1
+    # '''
     # check how to wind
     if layer != N_layers:
         phi_start = phi0
@@ -618,6 +758,32 @@ def gen_helical_coil_surface_points(df, coil_num, conductor_end='out',
         hold = phi_start
         phi_start = phi_end
         phi_end = hold
+    # '''
+    '''
+    if layer == N_layers:
+        # in last layer, wind until phi1 reached
+        # FIXME! This only works assuming outer layer has helicity=+1.
+        # This is true for Mu2e but not guaranteed to be generally true.
+        # It also assumes phi1 < phi0, else this only works for helicity=-1.
+        last_turn_rad = 2*np.pi - abs(phi1-phi0)
+        if N_layers < 2:
+            phi_start = phi0
+        else:
+            # FIXME!
+            if np.isclose(N_turns, int(N_turns)):
+                phi_start = phi0
+            else:
+                phi_start = phi0 - (1 - N_turns % 1) * 2*np.pi
+        phi_end = self.phi_i + self.helicity*(2*np.pi*(geom_coil.N_turns-1) + self.last_turn_rad)
+    else:
+        # update phi_i, if N_turns is not an integer
+        # this ensures negative helicity layer 1 actually has input at the location of the bus bar
+        if np.isclose(geom_coil.N_turns, int(geom_coil.N_turns)):
+            self.phi_i = geom_coil.phi0
+        else:
+            self.phi_i = geom_coil.phi0 - (1 - geom_coil.N_turns % 1) * 2*np.pi
+        self.phi_f = self.phi_i + self.helicity*(2*np.pi*geom_coil.N_turns)
+    '''
     # how much to subtract in phis
     dphi = abs(phi_end-phi_start)
     # full number of turns

@@ -53,7 +53,8 @@ class StraightIntegrator3D(object):
             self.zps = lib.linspace(0, self.L, abs(int(self.L/self.dxyz[2] + 1)))
         self.XP, self.YP, self.ZP = lib.meshgrid(self.xps, self.yps, self.zps, indexing='ij')
         # rotation
-        self.euler2 = geom_df[['Phi2', 'theta2', 'psi2']].values
+        # self.euler2 = geom_df[['Phi2', 'theta2', 'psi2']].values
+        self.euler2 = np.array([geom_df.Phi2, geom_df.theta2, geom_df.psi2])
         self.rot = Rotation.from_euler('zyz', self.euler2[::-1], degrees=True)
         self.inv_rot = self.rot.inv()
 
@@ -157,7 +158,7 @@ class StraightIntegrator3D(object):
 
         return self.df
 
-    def save_grid_calc(self, savetype='pkl', savename=f'Bmaps/helicalc_partial/Mau13.DS_region.standard-busbar.cond_N_57_straight_TEST', all_cols=False):
+    def save_grid_calc(self, savetype='pkl', savename=f'Bmaps/helicalc_partial/Mu2e_V13.DS_region.standard-busbar.cond_N_57_straight_TEST', all_cols=False):
         # determine which columns to save
         i = int(round(self.geom_df['cond N']))
         cols = ['X', 'Y', 'Z']
@@ -168,6 +169,9 @@ class StraightIntegrator3D(object):
             else:
                 if f'bus_str_cn_{i}' in col:
                     cols.append(col)
+        # check for Hall probe label
+        if "HP" in self.df.columns:
+            cols.append("HP")
         # save
         df_to_save = self.df[cols]
         if savetype == 'pkl':
@@ -223,7 +227,8 @@ class ArcIntegrator3D(object):
         self.COSPHI = lib.cos(self.PHI)
         self.RHOP = self.rho - self.YP
         # rotations
-        self.euler2 = geom_df[['Phi2', 'theta2', 'psi2']].values
+        # self.euler2 = geom_df[['Phi2', 'theta2', 'psi2']].values
+        self.euler2 = np.array([geom_df.Phi2, geom_df.theta2, geom_df.psi2])
         self.rot = Rotation.from_euler('zyz', self.euler2[::-1], degrees=True)
         self.inv_rot = self.rot.inv()
 
@@ -323,7 +328,7 @@ class ArcIntegrator3D(object):
 
         return self.df
 
-    def save_grid_calc(self, savetype='pkl', savename=f'Bmaps/helicalc_partial/Mau13.DS_region.standard-busbar.cond_N_57_arc_TEST', all_cols=False):
+    def save_grid_calc(self, savetype='pkl', savename=f'Bmaps/helicalc_partial/Mu2e_V13.DS_region.standard-busbar.cond_N_57_arc_TEST', all_cols=False):
         # determine which columns to save
         try:
             i = int(round(self.geom_df['cond N']))
@@ -337,6 +342,9 @@ class ArcIntegrator3D(object):
             else:
                 if f'bus_arc_cn_{i}' in col:
                     cols.append(col)
+        # check for Hall probe label
+        if "HP" in self.df.columns:
+            cols.append("HP")
         # save
         df_to_save = self.df[cols]
         if savetype == 'pkl':
