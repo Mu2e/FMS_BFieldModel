@@ -6,10 +6,10 @@ conda activate helicalc
 
 logdir="/home/shared_data/Bmaps/helicalc_partial/logs/"
 
-region="DS"
+# region="DS"
 # region="TSd"
 # region="DSCylFMS"
-# region="DSCylFMSAll"
+region="DSCylFMSAll"
 
 test="n"
 # test="y"
@@ -17,9 +17,16 @@ test="n"
 time=$(date +"%Y-%m-%d_%H%M%S")
 
 # run on each GPU, putting process in background
-python drive_interlayer.py -r ${region} -D 0 -t ${test} > ${logdir}${time}_GPU0_calculations_${region}_interlayer.log &
-python drive_interlayer.py -r ${region} -D 1 -t ${test} > ${logdir}${time}_GPU1_calculations_${region}_interlayer.log &
-python drive_interlayer.py -r ${region} -D 2 -t ${test} > ${logdir}${time}_GPU2_calculations_${region}_interlayer.log &
-python drive_interlayer.py -r ${region} -D 3 -t ${test} > ${logdir}${time}_GPU3_calculations_${region}_interlayer.log &
+# no jacobian
+# python drive_interlayer.py -r ${region} -D 0 -t ${test} > ${logdir}${time}_GPU0_calculations_${region}_interlayer.log &
+# python drive_interlayer.py -r ${region} -D 1 -t ${test} > ${logdir}${time}_GPU1_calculations_${region}_interlayer.log &
+# python drive_interlayer.py -r ${region} -D 2 -t ${test} > ${logdir}${time}_GPU2_calculations_${region}_interlayer.log &
+# python drive_interlayer.py -r ${region} -D 3 -t ${test} > ${logdir}${time}_GPU3_calculations_${region}_interlayer.log &
+
+# with jacobian
+python drive_interlayer.py -r ${region} -D 0 -j y -d 0.001 -t ${test} > ${logdir}${time}_GPU0_calculations_${region}_interlayer.log &
+python drive_interlayer.py -r ${region} -D 1 -j y -d 0.001 -t ${test} > ${logdir}${time}_GPU1_calculations_${region}_interlayer.log &
+python drive_interlayer.py -r ${region} -D 2 -j y -d 0.001 -t ${test} > ${logdir}${time}_GPU2_calculations_${region}_interlayer.log &
+python drive_interlayer.py -r ${region} -D 3 -j y -d 0.001 -t ${test} > ${logdir}${time}_GPU3_calculations_${region}_interlayer.log &
 
 # read -p "Press any key to resume ..."

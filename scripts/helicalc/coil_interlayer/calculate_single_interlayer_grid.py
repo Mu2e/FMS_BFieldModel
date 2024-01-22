@@ -7,7 +7,11 @@ import argparse
 from tqdm import tqdm
 from helicalc import helicalc_dir, helicalc_data
 from helicalc.busbar import ArcIntegrator3D
-from helicalc.tools import generate_cartesian_grid_df, generate_cylindrical_grid_df
+from helicalc.tools import (
+    generate_cartesian_grid_df,
+    generate_cylindrical_grid_df,
+    add_points_for_J
+)
 from helicalc.constants import dxyz_arc_bar_dict, TSd_grid, DS_grid, DS_FMS_cyl_grid, DS_FMS_cyl_grid_SP
 from helicalc.solenoid_geom_funcs import load_all_geoms
 
@@ -15,8 +19,8 @@ from helicalc.solenoid_geom_funcs import load_all_geoms
 datadir = helicalc_data+'Bmaps/helicalc_partial/'
 
 # load straight bus bars, dump all other geometries
-# paramname = 'Mu2e_V13'
-paramname = 'Mu2e_V13_altDS11'
+paramname = 'Mu2e_V13'
+# paramname = 'Mu2e_V13_altDS11'
 version = paramname.replace('Mu2e_V', '')
 df_dict = load_all_geoms(version=version, return_dict=True)
 df_interlayer = df_dict['interlayers']
@@ -38,6 +42,12 @@ if __name__=='__main__':
                         'is 56 (DS-1 interlayer connect).')
     parser.add_argument('-D', '--Device',
                         help='Which GPU to use? [0 (default), 1, 2, 3].')
+    parser.add_argument('-j', '--Jacobian',
+                        help='Include points for calculating '+
+                        'the Jacobian of the field? "n"(default)/"y"')
+    parser.add_argument('-d', '--dxyz_Jacobian',
+                        help='What step size (in m) to use for points used in '+
+                        'the Jacobian calculation? e.g. "0.001" (default)')
     parser.add_argument('-t', '--Testing',
                         help='Calculate using small subset of field points '+
                         ' (N=100000)? "y"/"n"(default).')
@@ -71,17 +81,28 @@ if __name__=='__main__':
         args.Device = 0
     else:
         args.Device = int(args.Device.strip())
+    if args.Jacobian is None:
+        args.Jacobian = False
+    else:
+        if args.Jacobian.strip() == 'y':
+            args.Jacobian = True
+        else:
+            args.Jacobian = False
+    if args.dxyz_Jacobian is None:
+        args.dxyz_Jacobian = 0.001
+    else:
+        args.dxyz_Jacobian = float(args.dxyz_Jacobian)
     if args.Testing is None:
         args.Testing = False
     else:
         args.Testing = args.Testing.strip() == 'y'
     # set up base directory/name
-    if args.Testing:
-        base_name = f'Bmaps/helicalc_partial/tests/{paramname}.{reg}_region.'+\
-                     'test-helicalc.'
-    else:
-        base_name = f'Bmaps/helicalc_partial/{paramname}.{reg}_region.'+\
-                     'standard-helicalc.'
+    # if args.Testing:
+    #     base_name = f'Bmaps/helicalc_partial/tests/{paramname}.{reg}_region.'+\
+    #                  'test-helicalc.'
+    # else:
+    #     base_name = f'Bmaps/helicalc_partial/{paramname}.{reg}_region.'+\
+    #                  'standard-helicalc.'
     # print configs
     print(f'Region: {reg}')
     # redirect stdout to log file
@@ -99,6 +120,18 @@ if __name__=='__main__':
         df = generate_cartesian_grid_df(regions[reg])
     if args.Testing:
         df = df.iloc[:100000].copy()
+    # add extra points for Jacobian?
+    if args.Jacobian:
+        df = add_points_for_J(df, dxyz=args.dxyz_Jacobian)
+        suff = '_Jacobian'
+    else:
+        suff = ''
+    if args.Testing:
+        base_name = f'Bmaps/helicalc_partial/tests/{paramname}.{reg}_region.'+\
+                     f'test-helicalc{suff}.'
+    else:
+        base_name = f'Bmaps/helicalc_partial/{paramname}.{reg}_region.'+\
+                     f'standard-helicalc{suff}.'
     # initialize conductor
     myArc = ArcIntegrator3D(df_cond, dxyz=dxyz, dev=args.Device)
     # integrate!

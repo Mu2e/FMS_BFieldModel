@@ -6,14 +6,21 @@ import numpy as np
 from helicalc import helicalc_dir, helicalc_data
 from helicalc.solcalc import *
 from helicalc.geometry import read_solenoid_geom_combined
-from helicalc.tools import generate_cartesian_grid_df
+from helicalc.tools import (
+    generate_cartesian_grid_df,
+    generate_cylindrical_grid_df,
+    add_points_for_J
+)
 from helicalc.constants import (
     PS_grid,
     TSu_grid,
     TSd_grid,
     DS_grid,
     PStoDumpArea_grid,
-    ProtonDumpArea_grid
+    ProtonDumpArea_grid,
+    DS_cyl2d_grid_5mm,
+    DS_FMS_cyl_grid,
+    DS_FMS_cyl_grid_SP,
 )
 
 # paramdir = '/home/ckampa/coding/helicalc/dev/params/'
@@ -45,7 +52,10 @@ base_coils = 'PS_coldmass_7mrad'
 
 regions = {'PS': PS_grid, 'TSu': TSu_grid, 'TSd': TSd_grid, 'DS': DS_grid,
            'PStoDumpArea': PStoDumpArea_grid,
-           'ProtonDumpArea': ProtonDumpArea_grid}
+           'ProtonDumpArea': ProtonDumpArea_grid,
+           'DSCyl2D': DS_cyl2d_grid_5mm,
+           'DSCylFMS': DS_FMS_cyl_grid,
+           'DSCylFMSAll': [DS_FMS_cyl_grid, DS_FMS_cyl_grid_SP]}
 
 if __name__=='__main__':
     # parse command line arguments
@@ -53,7 +63,13 @@ if __name__=='__main__':
     parser.add_argument('-r', '--Region',
                         help='Which region of Mu2e to calculate? '+
                         '["PS"(default), "TSu", "TSd", "DS", "PStoDumpArea"'+
-                        ', "ProtonDumpArea"]')
+                        ', "ProtonDumpArea", "DSCyl2D", "DSCylFMS", "DSCylFMSAll"]')
+    parser.add_argument('-j', '--Jacobian',
+                        help='Include points for calculating '+
+                        'the Jacobian of the field? "n"(default)/"y"')
+    parser.add_argument('-d', '--dxyz_Jacobian',
+                        help='What step size (in m) to use for points used in '+
+                        'the Jacobian calculation? e.g. "0.001" (default)')
     parser.add_argument('-c', '--Coils',
                         help='Which coils to calculate? '+
                         '["1,2,3" (default), "1,2", "1,3", "2,3", 1", "2", "3"]')
@@ -66,6 +82,17 @@ if __name__=='__main__':
         args.Region = 'PS'
     else:
         args.Region = args.Region.strip()
+    if args.Jacobian is None:
+        args.Jacobian = False
+    else:
+        if args.Jacobian.strip() == 'y':
+            args.Jacobian = True
+        else:
+            args.Jacobian = False
+    if args.dxyz_Jacobian is None:
+        args.dxyz_Jacobian = 0.001
+    else:
+        args.dxyz_Jacobian = float(args.dxyz_Jacobian)
     if args.Coils is None:
         args.Coils = '1,2,3'
     else:
@@ -90,9 +117,18 @@ if __name__=='__main__':
     # step size for integrator
     drz = np.array([5e-3, 1e-2])
     # create grid
-    df = generate_cartesian_grid_df(regions[reg])
+    if reg in ['DSCylFMS', 'DSCylFMSAll']:
+        df = generate_cylindrical_grid_df(regions[reg], dec_round=9)
+    else:
+        df = generate_cartesian_grid_df(regions[reg])
+    # add extra points for Jacobian?
+    if args.Jacobian:
+        df = add_points_for_J(df, dxyz=args.dxyz_Jacobian)
+        suff = '_Jacobian'
+    else:
+        suff = ''
     # define base save name
-    base_name = f'{paramname}.SolCalc.{reg}_region.{base_coils}'
+    base_name = f'{paramname}.SolCalc.{reg}_region.{base_coils}{suff}'
     # load geometry
     geom_df_mu2e = read_solenoid_geom_combined(paramdir,paramname)
     # which coils

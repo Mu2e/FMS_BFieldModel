@@ -27,6 +27,12 @@ if __name__=='__main__':
     parser.add_argument('-D', '--Device',
                         help='Which GPU (i.e. which coils/layers) to use? '+
                         '[0 (default), 1, 2, 3].')
+    parser.add_argument('-j', '--Jacobian',
+                        help='Include points for calculating '+
+                        'the Jacobian of the field? "n"(default)/"y"')
+    parser.add_argument('-d', '--dxyz_Jacobian',
+                        help='What step size (in m) to use for points used in '+
+                        'the Jacobian calculation? e.g. "0.001" (default)')
     parser.add_argument('-t', '--Testing',
                         help='Calculate using small subset of field points '+
                         '(N=10000)? "y"/"n"(default).')
@@ -42,6 +48,16 @@ if __name__=='__main__':
     else:
         args.Device = int(args.Device.strip())
     Dev = args.Device
+    if args.Jacobian is None:
+        args.Jacobian = 'n'
+    else:
+        args.Jacobian = args.Jacobian.strip()
+    Jac = args.Jacobian
+    if args.dxyz_Jacobian is None:
+        args.dxyz_Jacobian = '0.001'
+    else:
+        args.dxyz_Jacobian = args.dxyz_Jacobian.strip()
+    dxyz = args.dxyz_Jacobian
     if args.Testing is None:
         args.Testing = 'n'
     else:
@@ -57,5 +73,5 @@ if __name__=='__main__':
         cn = df_cn['cond N']
         print(f'Calculating {i}: cond N={cn}, info={df_cn["Name/role"]}')
         _ = subprocess.run(f'python calculate_single_arc_bar_grid.py'+
-                           f' -r {reg} -C {cn} -D {Dev} -t {Test}', shell=True,
+                           f' -r {reg} -C {cn} -D {Dev} -j {Jac} -d {dxyz} -t {Test}', shell=True,
                            capture_output=False)
