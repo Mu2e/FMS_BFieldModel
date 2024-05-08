@@ -90,6 +90,15 @@ def generate_cylindrical_grid_df(grid_dict, dec_round=3):
 
 #     return df
 
+# add points for numerical Jacobian calculation
+def add_points_for_J(df, dxyz=0.001):
+    x0s, y0s, z0s = df[['X', 'Y', 'Z']].values.T
+    xs = np.concatenate(np.array([x0s, x0s, x0s, x0s, x0s, x0s + dxyz, x0s - dxyz]).T)
+    ys = np.concatenate(np.array([y0s, y0s, y0s, y0s + dxyz, y0s - dxyz, y0s, y0s]).T)
+    zs = np.concatenate(np.array([z0s, z0s + dxyz, z0s - dxyz, z0s, z0s, z0s, z0s]).T)
+    df = pd.DataFrame({'X': xs, 'Y': ys, 'Z': zs})
+    return df
+
 # calculate cable length of all coils in a solenoid
 def calc_cable_lengths(geom_df, use_rho_0_a=True):
     N_cables = len(geom_df)

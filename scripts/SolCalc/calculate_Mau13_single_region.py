@@ -6,7 +6,11 @@ import numpy as np
 from helicalc import helicalc_dir, helicalc_data
 from helicalc.solcalc import *
 from helicalc.geometry import read_solenoid_geom_combined
-from helicalc.tools import generate_cartesian_grid_df, generate_cylindrical_grid_df
+from helicalc.tools import (
+    generate_cartesian_grid_df,
+    generate_cylindrical_grid_df,
+    add_points_for_J
+)
 from helicalc.constants import (
     PS_grid,
     TSu_grid,
@@ -21,8 +25,8 @@ from helicalc.constants import (
 
 # paramdir = '/home/ckampa/coding/helicalc/dev/params/'
 paramdir = helicalc_dir + 'dev/params/'
-# paramname = 'Mu2e_V13'
-paramname = 'Mu2e_V13_altDS11'
+paramname = 'Mu2e_V13'
+# paramname = 'Mu2e_V13_altDS11'
 datadir = helicalc_data+'Bmaps/SolCalc_partial/'
 
 regions = {'PS': PS_grid, 'TSu': TSu_grid, 'TSd': TSd_grid, 'DS': DS_grid,
@@ -39,6 +43,12 @@ if __name__=='__main__':
                         help='Which region of Mu2e to calculate? '+
                         '["PS"(default), "TSu", "TSd", "DS", "PStoDumpArea"'+
                         ', "ProtonDumpArea", "DSCyl2D", "DSCylFMS", "DSCylFMSAll"]')
+    parser.add_argument('-j', '--Jacobian',
+                        help='Include points for calculating '+
+                        'the Jacobian of the field? "n"(default)/"y"')
+    parser.add_argument('-d', '--dxyz_Jacobian',
+                        help='What step size (in m) to use for points used in '+
+                        'the Jacobian calculation? e.g. "0.001" (default)')
     parser.add_argument('-t', '--Testing',
                         help='Calculate using small subset of coils?'+
                         '"y"(default)/"n"')
@@ -50,6 +60,17 @@ if __name__=='__main__':
         args.Region = 'PS'
     else:
         args.Region = args.Region.strip()
+    if args.Jacobian is None:
+        args.Jacobian = False
+    else:
+        if args.Jacobian.strip() == 'y':
+            args.Jacobian = True
+        else:
+            args.Jacobian = False
+    if args.dxyz_Jacobian is None:
+        args.dxyz_Jacobian = 0.001
+    else:
+        args.dxyz_Jacobian = float(args.dxyz_Jacobian)
     if args.Testing is None:
         args.Testing = 'n'
     else:
@@ -73,8 +94,14 @@ if __name__=='__main__':
         df = generate_cylindrical_grid_df(regions[reg], dec_round=9)
     else:
         df = generate_cartesian_grid_df(regions[reg])
+    # add extra points for Jacobian?
+    if args.Jacobian:
+        df = add_points_for_J(df, dxyz=args.dxyz_Jacobian)
+        suff = '_Jacobian'
+    else:
+        suff = ''
     # define base save name
-    base_name = f'{paramname}.SolCalc.{reg}_region.standard'
+    base_name = f'{paramname}.SolCalc.{reg}_region.standard{suff}'
     # load geometry
     geom_df_mu2e = read_solenoid_geom_combined(paramdir,paramname)
     # TESTING (only a few coils)

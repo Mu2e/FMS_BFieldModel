@@ -1,0 +1,4 @@
+Coil #,Coil IR [mm],Coil OR [mm],Coil Length [mm],XC [mm],YC [mm],ZC [mm],Pitch [deg],Yaw [deg],Roll [deg],Total current [A],number of layers,Number of turns per layer,Total Number of turns,Current [A],Helicity
+0,1050,1070.5,8.03,0,0,0,0,0,0,6114,1,1,1,6114,1
+1,1050,1070.5,8.03,0,0,-1000.0,0,0,0,6114,1,1,1,6114,1
+2,1500,1520.5,100.0,10.0,0,1000.0,0,10.0,0,61140,1,10,10,6114,1

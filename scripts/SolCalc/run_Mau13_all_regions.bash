@@ -11,7 +11,7 @@ conda activate helicalc
 # run TSd
 # python calculate_Mau13_single_region.py -r TSd -t n
 # run DS
-python calculate_Mau13_single_region.py -r DS -t n
+#python calculate_Mau13_single_region.py -r DS -t n
 # run PStoDumpArea
 # python calculate_Mau13_single_region.py -r PStoDumpArea -t n
 # run ProtonDumpArea
@@ -19,6 +19,9 @@ python calculate_Mau13_single_region.py -r DS -t n
 # run DSCylFMS (BP)
 # python calculate_Mau13_single_region.py -r DSCylFMS -t n
 # run DSCylFMSAll (BP+SP)
-# python calculate_Mau13_single_region.py -r DSCylFMSAll -t n
+# without Jacobian points
+python calculate_Mau13_single_region.py -r DSCylFMSAll -j n -d 0.001 -t n
+# with Jacobian points
+python calculate_Mau13_single_region.py -r DSCylFMSAll -j y -d 0.001 -t n
 
 # read -p "Press any key to resume ..."
