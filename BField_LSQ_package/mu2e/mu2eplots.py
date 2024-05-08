@@ -59,7 +59,7 @@ from matplotlib import gridspec
 import pandas as pd
 import plotly.tools as tls
 import plotly.graph_objs as go
-from mpldatacursor import datacursor
+#from mpldatacursor import datacursor
 import ipywidgets as widgets
 from IPython.display import display
 # from plotly.widgets import GraphWidget
@@ -533,9 +533,12 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
     # Some dataframes (ex. PINN) will drop R=0 point
     if df[df.HP=='SP1'].shape[0] != 0 :
         r_SP = [-0.095, -0.054, -0.0, 0.0, 0.054, 0.095]
+        n_SP = ['SP3', 'SP2', 'SP1', 'SP1', 'SP2', 'SP3']
     else:
         r_SP = [-0.095, -0.054, 0.054, 0.095]
+        n_SP = ['SP3', 'SP2', 'SP2', 'SP3']
     r_BP = [-0.8, -0.656, -0.488, -0.319, -0.044, 0.044, 0.319, 0.488, 0.656, 0.8]
+    n_BP = ['BP5', 'BP4', 'BP3', 'BP2', 'BP1', 'BP1', 'BP2', 'BP3', 'BP4', 'BP5']
     nSP = len(r_SP)
     nBP = len(r_BP)
     
@@ -544,24 +547,35 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
     df_SP = df[df.Z < zmin_BP-0.025]
     for iSP in range(int(df_SP.shape[0]/nSP)):
         df_SP_slice = df_SP[iSP*nSP:(iSP+1)*nSP]
-        df_BP = pd.DataFrame(columns=df.columns,index=range(nBP))
+        df_BP = pd.DataFrame(columns=df.columns,index=range(nBP), dtype=float)
+        df_BP['HP'] = df_BP['HP'].astype(object)
         df_BP.loc[:,'R'] = r_BP
+        df_BP.loc[:, 'HP'] = n_BP
         df_slice = pd.concat([df_SP_slice,df_BP])
         df_slice.sort_values(by=['R'],inplace=True)
-        dfs_SP.append(df_slice.set_index('R').interpolate(method='index',axis=0,limit_area='inside').reset_index())
+        HP_vals = df_slice.loc[:, 'HP'].values
+        cols = [c for c in df_slice.columns if not "HP" in c]
+        df_ = df_slice[cols].set_index('R').interpolate(method='index',axis=0,limit_area='inside').reset_index()
+        df_.loc[:, 'HP'] = HP_vals
+        dfs_SP.append(df_)
         dfs_SP.append(df_slice)
-    
+
     # Z slices with BP points only
     dfs_BP = []
     df_BP = df[df.Z > zmax_SP+0.025]
     for iBP in range(int(df_BP.shape[0]/nBP)):
         df_BP_slice = df_BP[iBP*nBP:(iBP+1)*nBP]
-        df_SP = pd.DataFrame(columns=df.columns,index=range(nSP))
+        df_SP = pd.DataFrame(columns=df.columns,index=range(nSP), dtype=float)
+        df_SP['HP'] = df_SP['HP'].astype(object)
         df_SP.loc[:,'R'] = r_SP
         df_slice = pd.concat([df_BP_slice,df_SP])
         df_slice.sort_values(by=['R'],inplace=True)
+        HP_vals = df_slice.loc[:, 'HP'].values
+        cols = [c for c in df_slice.columns if not "HP" in c]
+        df_ = df_slice[cols].set_index('R').interpolate(method='index',axis=0,limit_area='inside').reset_index()
+        df_.loc[:, 'HP'] = HP_vals
         dfs_BP.append(df_slice)
-        dfs_BP.append(df_slice.set_index('R').interpolate(method='index',axis=0,limit_area='inside').reset_index())
+        dfs_BP.append(df_)
 
     #Z slices with both points
     df_both = df[(df.Z > zmin_BP-0.025) & (df.Z < zmax_SP+0.025)]
