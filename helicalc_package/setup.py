@@ -26,6 +26,7 @@ setuptools.setup(
     version="0.0.0",
     author="Cole Kampa",
     author_email="ckampa13@gmail.com",
+    license_files = ('LICENSE',),
     description="Biot-Savart integration for helical solenoids.",
     long_description=long_description,
     long_description_content_type="text/markdown",

@@ -1,3 +1,4 @@
+### helicalc
 __pycache__/
 *.py[cod]
 
@@ -20,11 +21,81 @@ wheels/
 *.egg
 MANIFEST
 
-# Jupyter Notebook checkpoints
-.ipynb_checkpoints
-
 # package specific
 legacy/
 # symlink for output data, and needs
 # "PSoff" dataframe for SolCalc_GUI
 data
+
+##### from BField_LSQ
+# C extensions
+*.so
+
+# Distribution / packaging
+env/
+/dist/
+cover/
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Data, Images, tar
+# *.png
+# *.pdf
+#*.txt
+*.tar
+*.gz
+*.p
+*.table
+scripts/*.png
+scripts/*.pdf
+scripts/*/*.png
+scripts/*/*.pdf
+
+# MSFT Files
+*.doc*
+*.xls*
+
+#Folders
+#plots/
+#FieldMap*
+#Presentations/
+#docs/
+#datafiles/
+#fit_params/
+#.ipynb_checkpoints/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+
