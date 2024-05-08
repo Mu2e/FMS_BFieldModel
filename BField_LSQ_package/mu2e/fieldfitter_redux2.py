@@ -236,6 +236,14 @@ class FieldFitter:
                 pvd['length1'], pvd['ms_c1'], pvd['ns_c1'],
                 pvd['length2'], pvd['ms_c2'], pvd['ns_c2'],
                 self.bz_calc_data, self.br_calc_data, self.bphi_calc_data)
+        elif func_version == 1006:
+            self.fit_func = ff.brzphi_3d_producer_giant_function_v1006(
+                self.ZZ, self.RR, self.PP,
+                pvd['pitch1'], pvd['ms_h1'], pvd['ns_h1'],
+                pvd['pitch2'], pvd['ms_h2'], pvd['ns_h2'],
+                pvd['length1'], pvd['ms_c1'], pvd['ns_c1'],
+                pvd['length2'], pvd['ms_c2'], pvd['ns_c2'],
+                self.bz_calc_data, self.br_calc_data, self.bphi_calc_data)
         else:
             raise NotImplementedError(f'Function version={func_version} not implemented.')
 
@@ -276,7 +284,19 @@ class FieldFitter:
             self.add_params_cyl(2)
             self.add_params_cart_simple(cfg_params)
             self.add_params_biot_savart(cfg_params, cfg_pickle.recreate)
-
+        # z0 offset
+        elif func_version == 1006:
+            self.add_params_hel(1)
+            self.add_params_hel(2)
+            self.add_params_cyl_v1005(1)
+            self.add_params_cyl(2)
+            self.add_params_cart_simple(cfg_params)
+            self.add_params_biot_savart(cfg_params, cfg_pickle.recreate)
+            #z0
+            if not cfg_params.z0 is None:
+                self.params.add('z0', value=cfg_params.z0, vary=False)
+            else:
+                self.params.add('z0', value=0.0, vary=False)
 
     def model(self):
         return Model(self.fit_func, independent_vars=['r', 'z', 'phi', 'x', 'y'])
@@ -318,30 +338,32 @@ class FieldFitter:
             print(cfg_params)
         start_time = time()
 
+        if cfg_params.noise != None:
+            print(f'Applying weights for noise {cfg_params.noise}')
+            noise_err  = 1/np.full_like(self.Bz,cfg_params.noise)
+            weights = np.concatenate(3*[noise_err]).ravel()
+        else:
+            print('Using default weights (all = 1)')
+            weights = None
+
         if cfg_pickle.recreate:
             for param in self.params:
                 self.params[param].vary = False
             self.result = self.mod.fit(np.concatenate([self.Br, self.Bz, self.Bphi]).ravel(),
+                                       weights=weights,
                                        r=self.RR, z=self.ZZ, phi=self.PP, x=self.XX, y=self.YY, params=self.params,
                                        method='leastsq', fit_kws={'maxfev': 1})
         else:
             print_status = FitStatus(1000)
             # mag = 1/np.sqrt(Br**2+Bz**2+Bphi**2)
             if cfg_params.method == 'leastsq' or cfg_params.method == 'brute':
-                if cfg_params.noise != None:
-                    print(f'Applying weights for noise {cfg_params.noise}')
-                    noise_err  = 1/np.full_like(self.Bz,cfg_params.noise)
-                    self.result = self.mod.fit(np.concatenate([self.Br, self.Bz, self.Bphi]).ravel(),
-                                               weights=np.concatenate([noise_err, noise_err, noise_err]).ravel(),
-                                               r=self.RR, z=self.ZZ, phi=self.PP, x=self.XX, y=self.YY, params=self.params,
-                                               method=cfg_params.method) #max_nfev if wanting to limit function calls
-                else:
-                    self.result = self.mod.fit(np.concatenate([self.Br, self.Bz, self.Bphi]).ravel(),
-                                               r=self.RR, z=self.ZZ, phi=self.PP, x=self.XX, y=self.YY, params=self.params,
-                                               method=cfg_params.method) #max_nfev if wanting to limit function calls
+                self.result = self.mod.fit(np.concatenate([self.Br, self.Bz, self.Bphi]).ravel(),
+                                           weights=np.concatenate([noise_err, noise_err, noise_err]).ravel(),
+                                           r=self.RR, z=self.ZZ, phi=self.PP, x=self.XX, y=self.YY, params=self.params,
+                                           method=cfg_params.method) #max_nfev if wanting to limit function calls
             elif cfg_params.method == 'least_squares':
                 self.result = self.mod.fit(np.concatenate([self.Br, self.Bz, self.Bphi]).ravel(),
-                                           # weights=np.concatenate([mag, mag, mag]).ravel(),
+                                           weights=weights,
                                            r=self.RR, z=self.ZZ, phi=self.PP, x=self.XX, y=self.YY, params=self.params,
                                            method='least_squares', iter_cb=print_status, fit_kws={'verbose': 1,
                                                                                                   'gtol': 1e-8,

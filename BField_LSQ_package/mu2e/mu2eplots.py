@@ -623,12 +623,11 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
     if 'mpl' in mode:
         if not ax:
             if ptype.lower() == '3d' and not df_fit:
-                fig = plt.figure()
+                fig = plt.figure(constrained_layout='constrained')
             elif ptype.lower() == 'heat':
-                fig = plt.figure()
+                fig = plt.figure(constrained_layout='constrained')
             else:
-                fig = plt.figure(figsize=plt.figaspect(0.4), constrained_layout=True)
-                fig.set_constrained_layout_pads(hspace=0., wspace=0.15)
+                fig = plt.figure(figsize=plt.figaspect(0.4), constrained_layout='constrained')
 
         if df_fit:
             ax = fig.add_subplot(1, 2, 1, projection='3d')
