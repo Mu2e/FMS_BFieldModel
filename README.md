@@ -3,3 +3,4 @@ This repository contains a collection of custom python packages used in the BFie
 
 The following packages are available, each in a directory appended with "_package" to distinguish from the python package name:
 - `helicalc`: Biot-Savart integration for a variety of complex superconductor geometries. The calcualtion is GPU accelerated by utilizing the PyTorch package.
+- `mu2e`: Analytical model functions with non-linear least squares fitting for describing magnetic field measuremetns. The model can incorporate many types of functions. The two functional forms used in the nominal model are a series solution to Laplace's equation in cylindrical coordinates (periodic behavior in $\phi$, $z$ and modified Bessel function of the first kind in $r$) and trivial Cartesian solutions to Laplace's equation.
