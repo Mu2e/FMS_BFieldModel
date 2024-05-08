@@ -32,7 +32,7 @@ import numexpr as ne
 from numba import vectorize, guvectorize, float64, int64, njit, prange
 from numba.types import UniTuple
 from math import cos, sin
-import mpmath
+#import mpmath
 import six
 from six.moves import range, zip
 
