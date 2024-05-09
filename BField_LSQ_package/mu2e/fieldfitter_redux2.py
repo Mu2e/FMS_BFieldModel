@@ -350,7 +350,7 @@ class FieldFitter:
             for param in self.params:
                 self.params[param].vary = False
             self.result = self.mod.fit(np.concatenate([self.Br, self.Bz, self.Bphi]).ravel(),
-                                       weights=weights,
+                                       weights=weights, scale_covar=False,
                                        r=self.RR, z=self.ZZ, phi=self.PP, x=self.XX, y=self.YY, params=self.params,
                                        method='leastsq', fit_kws={'maxfev': 1})
         else:
@@ -358,12 +358,12 @@ class FieldFitter:
             # mag = 1/np.sqrt(Br**2+Bz**2+Bphi**2)
             if cfg_params.method == 'leastsq' or cfg_params.method == 'brute':
                 self.result = self.mod.fit(np.concatenate([self.Br, self.Bz, self.Bphi]).ravel(),
-                                           weights=np.concatenate([noise_err, noise_err, noise_err]).ravel(),
+                                           weights=weights, scale_covar=False,
                                            r=self.RR, z=self.ZZ, phi=self.PP, x=self.XX, y=self.YY, params=self.params,
                                            method=cfg_params.method) #max_nfev if wanting to limit function calls
             elif cfg_params.method == 'least_squares':
                 self.result = self.mod.fit(np.concatenate([self.Br, self.Bz, self.Bphi]).ravel(),
-                                           weights=weights,
+                                           weights=weights, scale_covar=False,
                                            r=self.RR, z=self.ZZ, phi=self.PP, x=self.XX, y=self.YY, params=self.params,
                                            method='least_squares', iter_cb=print_status, fit_kws={'verbose': 1,
                                                                                                   'gtol': 1e-8,
