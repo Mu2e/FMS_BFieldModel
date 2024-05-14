@@ -526,6 +526,10 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
     Y = df[y]
     Z = df[z]
 
+    # mask for colors
+    mask_fit = df.fit_point
+    mask_not_fit = ~mask_fit
+
     zmax_SP = np.max(df[df['HP'].str.contains('SP')].Z)
     zmin_BP = np.min(df[df['HP'].str.contains('BP')].Z)
     
@@ -545,6 +549,8 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
     #Z slices with SP points only
     dfs_SP = []
     df_SP = df[df.Z < zmin_BP-0.025]
+    fp = df_SP.loc[:, 'fit_point'].astype(float)
+    df_SP = df_SP[[c for c in df_SP.columns if c != "fit_point"]]
     for iSP in range(int(df_SP.shape[0]/nSP)):
         df_SP_slice = df_SP[iSP*nSP:(iSP+1)*nSP]
         df_BP = pd.DataFrame(columns=df.columns,index=range(nBP), dtype=float)
@@ -563,10 +569,13 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
     # Z slices with BP points only
     dfs_BP = []
     df_BP = df[df.Z > zmax_SP+0.025]
+    fp = df_BP.loc[:, 'fit_point'].astype(float)
+    df_BP = df_BP[[c for c in df_BP.columns if c != "fit_point"]]
     for iBP in range(int(df_BP.shape[0]/nBP)):
         df_BP_slice = df_BP[iBP*nBP:(iBP+1)*nBP]
         df_SP = pd.DataFrame(columns=df.columns,index=range(nSP), dtype=float)
         df_SP['HP'] = df_SP['HP'].astype(object)
+        df_SP['fit_point'] = df_SP['fit_point'].astype(float)
         df_SP.loc[:,'R'] = r_SP
         df_slice = pd.concat([df_BP_slice,df_SP])
         df_slice.sort_values(by=['R'],inplace=True)
@@ -623,16 +632,18 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
     if 'mpl' in mode:
         if not ax:
             if ptype.lower() == '3d' and not df_fit:
-                fig = plt.figure()
+                fig = plt.figure(constrained_layout='constrained')
             elif ptype.lower() == 'heat':
-                fig = plt.figure()
+                fig = plt.figure(constrained_layout='constrained')
             else:
-                fig = plt.figure(figsize=plt.figaspect(0.4), constrained_layout=True)
-                fig.set_constrained_layout_pads(hspace=0., wspace=0.15)
+                fig = plt.figure(figsize=plt.figaspect(0.4), constrained_layout='constrained')
 
         if df_fit:
             ax = fig.add_subplot(1, 2, 1, projection='3d')
-            ax.plot(X, Y, Z, 'ko', markersize=2, zorder=100)
+            # fit
+            ax.plot(X[mask_fit], Y[mask_fit], Z[mask_fit], 'ko', alpha=1.0, markersize=2, zorder=101)
+            # not fit
+            ax.plot(X[mask_not_fit], Y[mask_not_fit], Z[mask_not_fit], 'ro', alpha=0.5, markersize=2, zorder=100)
             ax.plot_wireframe(Xi, Yi, Z_fit, color='green', zorder=99)
         elif ptype.lower() == '3d':
             if not ax:
@@ -675,7 +686,8 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
             ax.view_init(elev=30., azim=30)
         if save_dir and not df_fit:
             plt.savefig(save_dir+'/'+save_name+'.png')
-            plt.clf()
+            if not show_plot:
+                plt.clf()
 
         if df_fit:
             ax2 = fig.add_subplot(1, 2, 2)
@@ -691,7 +703,8 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
             ax.dist = 11 # default 10
             if save_dir:
                 plt.savefig(save_dir+'/'+save_name+'_heat.pdf')
-            plt.clf()
+            if not show_plot:
+                plt.clf()
 
             # TODO turn this on/off with a flag in cfg_plot
             '''
@@ -720,6 +733,7 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
                 plt.savefig(save_dir+'/'+save_name+'_unc.pdf')
             plt.clf()
             '''
+    return fig, ax
 
 def mu2e_plot3d_nonuniform_cyl(df, x, y, z, conditions=None, mode='mpl', cut_color=5, info=None, save_dir=None, save_name=None,
                                df_fit=None, ptype='3d', aspect='square', cmin=None, cmax=None, fig=None, ax=None,

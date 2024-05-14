@@ -85,6 +85,9 @@ from mu2e.dataframeprod import DataFrameMaker
 from mu2e.fieldfitter_redux2 import FieldFitter
 from mu2e.mu2eplots import mu2e_plot3d, mu2e_plot3d_nonuniform_test, mu2e_plot3d_nonuniform_cyl
 from mu2e.syst_unc import laserunc, metunc, apply_field_unc
+# FIXME! It's messy and confusing that we use the same variable names to refer to
+# the named tuple instances in this code as we use to define the namedtuples in cfg_defs.
+from mu2e.cfg_defs import cfg_pickle as cfg_pickle_maker
 from mu2e import mu2e_ext_path
 import imp
 from six.moves import range
@@ -496,7 +499,8 @@ def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name, aspect='square', para
             if plot_type == 'mpl_nonuni':
                 mu2e_plot3d_nonuniform_test(df, ABC[0], ABC[1], ABC[2], conditions=conditions_str,
                                             df_fit=True, mode=plot_type, save_dir=save_dir,
-                                            do2pi=cfg_geom.do2pi, units='m', df_fine=df_fine)
+                                            do2pi=cfg_geom.do2pi, units='m', df_fine=df_fine,
+                                            show_plot=False)
             else:
                 save_name = mu2e_plot3d(df, ABC[0], ABC[1], ABC[2], conditions=conditions_str,
                                         df_fit=True, mode=plot_type, save_dir=save_dir,
@@ -565,6 +569,13 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
     #        hall_measure_data.loc[:,field] += noise_vec
     #    hall_measure_data.eval('Bx = Br*cos(Phi)-Bphi*sin(Phi)', inplace=True)
     #    hall_measure_data.eval('By = Bphi*cos(Phi)+Br*sin(Phi)', inplace=True)
+
+    # make a copy of hall measure data
+    if "fit_point" in hall_measure_data.columns:
+        hall_measure_data_eval = hall_measure_data.copy()
+        hall_measure_data = hall_measure_data.query("fit_point").copy().reset_index()
+    else:
+        hall_measure_data_eval = None
         
     print(hall_measure_data.head())
     print(hall_measure_data.columns)
@@ -621,20 +632,77 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
             pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+f'_{cfg_pickle.load_name.split("_")[-1]}.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
         else:
             pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+'.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
+    # FIXME! Are there any other cases to add? e.g. "cyl" with recreate will not make a file currently.
+    # else:
+    #     save_name = cfg_data.path.split('.')[0]+'.Mu2e.Fit_rec.p'
+    #     pkl.dump(ff.input_data, open(save_name, 'wb'), pkl.HIGHEST_PROTOCOL)
+
+    # eval on full set of points if some were left out
+    if not hall_measure_data_eval is None:
+        print('Evaluating on all point in measured df (not filtered by "fit_point" bool).')
+        ff_eval = FieldFitter(hall_measure_data_eval, None)
+        cfg_pickle_eval = cfg_pickle_maker(use_pickle=False, save_pickle=False,
+                                           load_name='eval',
+                                           save_name='eval', recreate=False)
+        ff_eval.prep_fit_func(cfg_params, cfg_pickle_eval)
+        model_eval = ff_eval.model()
+        fit_eval = model_eval.eval(r=hall_measure_data_eval.R.values, z=hall_measure_data_eval.Z.values,
+                                   phi=hall_measure_data_eval.Phi.values, x=hall_measure_data_eval.X.values,
+                                   y=hall_measure_data_eval.Y.values, params=ff.params)
+        hall_measure_data_eval.loc[:,'Br_fit']   = fit_eval[0:len(fit_eval)//3]
+        hall_measure_data_eval.loc[:,'Bz_fit']   = fit_eval[len(fit_eval)//3:2*len(fit_eval)//3]
+        hall_measure_data_eval.loc[:,'Bphi_fit'] = fit_eval[2*len(fit_eval)//3:]
+        plot_data = hall_measure_data_eval
+
+        # If fit uncertainties were saved in main fit, compute also for fine grid
+        if saveunc:
+            fit_unc = custom_eval_unc(model=model_eval, r=hall_measure_data_eval.R.values, z=hall_measure_data_eval.Z.values,
+                                      phi=hall_measure_data_eval.Phi.values, x=hall_measure_data_eval.X.values,
+                                      y=hall_measure_data.Y.values, params=ff.params)
+            hall_measure_data_eval.loc[:,'Br_unc']   = fit_unc[0:len(fit_unc)//3]
+            hall_measure_data_eval.loc[:,'Bz_unc']   = fit_unc[len(fit_unc)//3:2*len(fit_unc)//3]
+            hall_measure_data_eval.loc[:,'Bphi_unc'] = fit_unc[2*len(fit_unc)//3:]
+            if cfg_params.noise is not None:
+                # #NOMINAL CASE:
+                # pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+'.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
+                save_file = cfg_data.path.split('.')[0] + f'_noise{cfg_params.noise}_eval' + '.Mu2E.Fit.p'
+                pkl.dump(hall_measure_data_eval, open(save_file, "wb"), pkl.HIGHEST_PROTOCOL)
+            else:
+                save_file = cfg_data.path.split('.')[0] + f'_eval' + '.Mu2E.Fit.p'
+                pkl.dump(hall_measure_data_eval, open(save_file, "wb"), pkl.HIGHEST_PROTOCOL)
+
+        # 'Fit' to nominal with syst. params
+        elif cfg_pickle.load_name.endswith('Unc') and cfg_pickle.recreate:
+            save_file = cfg_data.path.split('.')[0]+f"_{cfg_pickle.load_name.split('_')[-1]}_eval.Mu2E.Fit.p"
+            pkl.dump(hall_measure_data_eval, open(save_file, "wb"), pkl.HIGHEST_PROTOCOL)
+
+        # Fitting to variant DSCylFMSAll map, comparing against nominal DSCylFine (ex. fitting to PINN-subtracted systematic)
+        # TODO make this more inclusive
+        elif 'Unc' in cfg_data.path:
+            unc = [p for p in cfg_data.path.split('_') if 'Unc' in p][0]
+            save_name = cfg_data.path.split('.')[0]+f"_{unc}_eval.Mu2E.Fit.p"
+            pkl.dump(hall_measure_data_eval, open(save_name, "wb"), pkl.HIGHEST_PROTOCOL)
+
+        # In all other cases, name of DSCylFine fit should match DSCylFine map?
+        else:
+            save_name = cfg_data.paht.split('.')[0]+f"_eval.Mu2E.Fit.p"
+            pkl.dump(hall_measure_data_eval, open(save_name, "wb"), pkl.HIGHEST_PROTOCOL)
+
+    else:
+        plot_data = ff.input_data.copy()
+        plot_data.loc[:, 'fit_point'] = True
 
     if cfg_plot.df_fine is not None:
+        print('Evaluating on df_fine.')
         df_fine = DataFrameMaker(cfg_plot.df_fine, input_type='pkl').data_frame
         df_fine = df_fine.sort_values(['Z', 'R', 'Phi'])
         print("df_fine")
         print(df_fine)
         # Need to manually define functional form
         ff_fine = FieldFitter(df_fine, None)
-        from collections import namedtuple
-        pickle_temp = namedtuple('pickle_temp', 'use_pickle save_pickle load_name save_name recreate')
-
-        cfg_pickle_fine = pickle_temp(use_pickle=False, save_pickle=False,
-                                      load_name='fine',
-                                      save_name='fine', recreate=False)
+        cfg_pickle_fine = cfg_pickle_maker(use_pickle=False, save_pickle=False,
+                                           load_name='fine',
+                                           save_name='fine', recreate=False)
         ff_fine.prep_fit_func(cfg_params, cfg_pickle_fine)
         model_fine = ff_fine.model()
         fit_fine = model_fine.eval(r=df_fine.R.values, z=df_fine.Z.values, phi=df_fine.Phi.values, x=df_fine.X.values, y=df_fine.Y.values, params=ff.params)
@@ -670,7 +738,7 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
     else:
         df_fine = None
     if cfg_plot.plot_type != 'none':
-        make_fit_plots(ff.input_data, cfg_data, cfg_geom, cfg_plot, name, aspect=aspect, parallel=parallel_plots, df_fine=df_fine)
+        make_fit_plots(plot_data, cfg_data, cfg_geom, cfg_plot, name, aspect=aspect, parallel=parallel_plots, df_fine=df_fine)
         
     return hall_measure_data, ff
 

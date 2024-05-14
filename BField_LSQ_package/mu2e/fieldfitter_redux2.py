@@ -236,6 +236,14 @@ class FieldFitter:
                 pvd['length1'], pvd['ms_c1'], pvd['ns_c1'],
                 pvd['length2'], pvd['ms_c2'], pvd['ns_c2'],
                 self.bz_calc_data, self.br_calc_data, self.bphi_calc_data)
+        elif func_version == 1006:
+            self.fit_func = ff.brzphi_3d_producer_giant_function_v1006(
+                self.ZZ, self.RR, self.PP,
+                pvd['pitch1'], pvd['ms_h1'], pvd['ns_h1'],
+                pvd['pitch2'], pvd['ms_h2'], pvd['ns_h2'],
+                pvd['length1'], pvd['ms_c1'], pvd['ns_c1'],
+                pvd['length2'], pvd['ms_c2'], pvd['ns_c2'],
+                self.bz_calc_data, self.br_calc_data, self.bphi_calc_data)
         else:
             raise NotImplementedError(f'Function version={func_version} not implemented.')
 
@@ -276,7 +284,19 @@ class FieldFitter:
             self.add_params_cyl(2)
             self.add_params_cart_simple(cfg_params)
             self.add_params_biot_savart(cfg_params, cfg_pickle.recreate)
-
+        # z0 offset, introduction of new k scheme (can control whether each is varied)
+        elif func_version == 1006:
+            self.add_params_hel(1)
+            self.add_params_hel(2)
+            self.add_params_cyl_v1006(1, AB_lim=cfg_params.AB_lim)
+            self.add_params_cyl(2)
+            self.add_params_cart_simple_fixable(cfg_params)
+            self.add_params_biot_savart(cfg_params, cfg_pickle.recreate)
+            #z0
+            if not cfg_params.z0 is None:
+                self.params.add('z0', value=cfg_params.z0, vary=False)
+            else:
+                self.params.add('z0', value=0.0, vary=False)
 
     def model(self):
         return Model(self.fit_func, independent_vars=['r', 'z', 'phi', 'x', 'y'])
@@ -318,30 +338,33 @@ class FieldFitter:
             print(cfg_params)
         start_time = time()
 
+        if cfg_params.noise != None:
+            print(f'Applying weights for noise {cfg_params.noise}')
+            noise_err  = 1/np.full_like(self.Bz,cfg_params.noise)
+            weights = np.concatenate(3*[noise_err]).ravel()
+        else:
+            print('Using default weights (all = 1)')
+            weights = None
+
         if cfg_pickle.recreate:
             for param in self.params:
                 self.params[param].vary = False
             self.result = self.mod.fit(np.concatenate([self.Br, self.Bz, self.Bphi]).ravel(),
+                                       weights=weights, scale_covar=False,
                                        r=self.RR, z=self.ZZ, phi=self.PP, x=self.XX, y=self.YY, params=self.params,
                                        method='leastsq', fit_kws={'maxfev': 1})
         else:
             print_status = FitStatus(1000)
             # mag = 1/np.sqrt(Br**2+Bz**2+Bphi**2)
             if cfg_params.method == 'leastsq' or cfg_params.method == 'brute':
-                if cfg_params.noise != None:
-                    print(f'Applying weights for noise {cfg_params.noise}')
-                    noise_err  = 1/np.full_like(self.Bz,cfg_params.noise)
-                    self.result = self.mod.fit(np.concatenate([self.Br, self.Bz, self.Bphi]).ravel(),
-                                               weights=np.concatenate([noise_err, noise_err, noise_err]).ravel(),
-                                               r=self.RR, z=self.ZZ, phi=self.PP, x=self.XX, y=self.YY, params=self.params,
-                                               method=cfg_params.method) #max_nfev if wanting to limit function calls
-                else:
-                    self.result = self.mod.fit(np.concatenate([self.Br, self.Bz, self.Bphi]).ravel(),
-                                               r=self.RR, z=self.ZZ, phi=self.PP, x=self.XX, y=self.YY, params=self.params,
-                                               method=cfg_params.method) #max_nfev if wanting to limit function calls
+                self.result = self.mod.fit(np.concatenate([self.Br, self.Bz, self.Bphi]).ravel(),
+                                           weights=weights, scale_covar=False,
+                                           r=self.RR, z=self.ZZ, phi=self.PP, x=self.XX, y=self.YY, params=self.params,
+                                           iter_cb=print_status,
+                                           method=cfg_params.method) #max_nfev if wanting to limit function calls
             elif cfg_params.method == 'least_squares':
                 self.result = self.mod.fit(np.concatenate([self.Br, self.Bz, self.Bphi]).ravel(),
-                                           # weights=np.concatenate([mag, mag, mag]).ravel(),
+                                           weights=weights, scale_covar=False,
                                            r=self.RR, z=self.ZZ, phi=self.PP, x=self.XX, y=self.YY, params=self.params,
                                            method='least_squares', iter_cb=print_status, fit_kws={'verbose': 1,
                                                                                                   'gtol': 1e-8,
@@ -495,6 +518,8 @@ class FieldFitter:
         # max asymmetric terms
         if 'ms_asym_max' not in self.params:
             self.params.add('ms_asym_max', value=cfg_params.ms_asym_max, vary=False)
+        else:
+            self.params['ms_asym_max'].value = cfg_params.ms_asym_max
 
     def add_params_hel(self, num):
         ms_range = range(self.params[f'ms_h{num}'].value)
@@ -542,6 +567,48 @@ class FieldFitter:
                         self.params.add(f'Dh{num}_{m}_{n}', value=0, vary=False)
                     else:
                         self.params[f'Dh{num}_{m}_{n}'].vary = False
+
+    def add_params_cyl_v1006(self, num, AB_lim=None):
+        ms_range = range(self.params[f'ms_c{num}'].value)
+        ns_range = range(self.params[f'ns_c{num}'].value)
+        #np.random.seed(0)
+        m_max = self.params['ms_asym_max'].value
+        if m_max < 0:
+            m_max = np.inf
+
+        # limits on A/B?
+        if AB_lim is None:
+            AB_min = None
+            AB_max = None
+        else:
+            AB_min = -AB_lim
+            AB_max = AB_lim
+
+        for m in ms_range:
+            for n in ns_range:
+                if (m > m_max) & (n > 0):
+                    var = False
+                else:
+                    var = True
+                # A and B are linear
+                if f'Ac{num}_{m}_{n}' not in self.params:
+                    self.params.add(f'Ac{num}_{m}_{n}', value=0.0, vary=var, min=AB_min, max=AB_max)
+                else:
+                    self.params[f'Ac{num}_{m}_{n}'].vary = var
+                if f'Bc{num}_{m}_{n}' not in self.params:
+                    self.params.add(f'Bc{num}_{m}_{n}', value=0.0, vary=var, min=AB_min, max=AB_max)
+                else:
+                    self.params[f'Bc{num}_{m}_{n}'].vary = var
+                # D is the phi phase
+                if f'Dc{num}_{n}' not in self.params:
+                    if n > 0:
+                        self.params.add(f'Dc{num}_{n}', value=np.pi/4., min=0, max=np.pi, vary=True)
+                    # n=0 is constant term, no phase
+                    else:
+                        self.params.add(f'Dc{num}_{n}', value=np.pi/2, vary=False)
+                elif n > 0:
+                    self.params[f'Dc{num}_{n}'].min = 0.0
+                    self.params[f'Dc{num}_{n}'].max = np.pi
 
     def add_params_cyl_v1005(self, num):
         ms_range = range(self.params[f'ms_c{num}'].value)
@@ -865,6 +932,42 @@ class FieldFitter:
                 self.params.add(k, value=0, vary=False)
             elif k == 'k3':
                 self.params[k].min=0.0
+
+    def add_params_cart_simple_fixable(self, cfg_params):
+        ks_dict = cfg_params.ks_dict
+        if ks_dict is None:
+            ks_dict = {}
+        cart_names = [f'k{i}' for i in range(1, 11)]
+
+        # limits for k
+        k_lim = cfg_params.k_lim
+        if k_lim is None:
+            k_min = None
+            k_max = None
+        else:
+            k_min = -k_lim
+            k_max = k_lim
+
+        for k in cart_names:
+            if k not in self.params and k in ks_dict:
+                self.params.add(k, value=ks_dict[k][0], vary=ks_dict[k][1], min=k_min, max=k_max)
+                # if k == 'k3':
+                #     # Get initial value for k3 from Fourier transform of r=0 line
+                #     # with open('../data/fit_params/params_fourier.pkl','rb') as infile:
+                #     #     params_fourier = pkl.load(infile)
+                #     # self.params.add(k, value=params_fourier['k3'], vary=True)#True
+                #     # self.params.add(k, value=ks_dict[k], vary=True)
+                #     self.params.add(k, value=ks_dict[k], min=0.0, vary=True)
+                #     #self.params.add(k, value=13000, vary=True, min=13000, max=14000, brute_step=100)
+                #     #with open('../data/fit_params/DS_only_V1_results.p','rb') as infile:
+                #     #    params_V1 = pkl.load(infile)
+                #     #self.params.add(k, value=params_V1['k3'].value, vary=True)#True
+                # else:
+                #     self.params.add(k, value=ks_dict[k], vary=True)
+            elif k not in self.params:
+                self.params.add(k, value=0, vary=False)
+            #elif k == 'k3':
+            #    self.params[k].min=0.0
 
     def add_params_finite_wire(self):
         if 'k1' not in self.params:
