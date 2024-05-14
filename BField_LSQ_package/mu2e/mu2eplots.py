@@ -686,7 +686,8 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
             ax.view_init(elev=30., azim=30)
         if save_dir and not df_fit:
             plt.savefig(save_dir+'/'+save_name+'.png')
-            plt.clf()
+            if not show_plot:
+                plt.clf()
 
         if df_fit:
             ax2 = fig.add_subplot(1, 2, 2)
@@ -702,7 +703,8 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
             ax.dist = 11 # default 10
             if save_dir:
                 plt.savefig(save_dir+'/'+save_name+'_heat.pdf')
-            plt.clf()
+            if not show_plot:
+                plt.clf()
 
             # TODO turn this on/off with a flag in cfg_plot
             '''
@@ -731,6 +733,7 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
                 plt.savefig(save_dir+'/'+save_name+'_unc.pdf')
             plt.clf()
             '''
+    return fig, ax
 
 def mu2e_plot3d_nonuniform_cyl(df, x, y, z, conditions=None, mode='mpl', cut_color=5, info=None, save_dir=None, save_name=None,
                                df_fit=None, ptype='3d', aspect='square', cmin=None, cmax=None, fig=None, ax=None,

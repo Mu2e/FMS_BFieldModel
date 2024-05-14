@@ -499,7 +499,8 @@ def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name, aspect='square', para
             if plot_type == 'mpl_nonuni':
                 mu2e_plot3d_nonuniform_test(df, ABC[0], ABC[1], ABC[2], conditions=conditions_str,
                                             df_fit=True, mode=plot_type, save_dir=save_dir,
-                                            do2pi=cfg_geom.do2pi, units='m', df_fine=df_fine)
+                                            do2pi=cfg_geom.do2pi, units='m', df_fine=df_fine,
+                                            show_plot=False)
             else:
                 save_name = mu2e_plot3d(df, ABC[0], ABC[1], ABC[2], conditions=conditions_str,
                                         df_fit=True, mode=plot_type, save_dir=save_dir,
@@ -631,6 +632,10 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
             pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+f'_{cfg_pickle.load_name.split("_")[-1]}.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
         else:
             pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+'.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
+    # FIXME! Are there any other cases to add? e.g. "cyl" with recreate will not make a file currently.
+    # else:
+    #     save_name = cfg_data.path.split('.')[0]+'.Mu2e.Fit_rec.p'
+    #     pkl.dump(ff.input_data, open(save_name, 'wb'), pkl.HIGHEST_PROTOCOL)
 
     # eval on full set of points if some were left out
     if not hall_measure_data_eval is None:
