@@ -19,6 +19,7 @@ if __name__=='__main__':
     parser.add_argument('-t', '--Testing',
                         help='Calculate using small subset of field points (N=1000)?'+
                         '"y"/"n"(default). If yes (y), region defaults to DS.')
+    parser.add_argument('-i', '--infile', help='pickle file with coordinate grid')
     args = parser.parse_args()
     # fill defaults if necessary
     if args.Region is None:
@@ -51,7 +52,8 @@ if __name__=='__main__':
 
     print(f'Running on GPU: {Dev}')
     for info in helicalc_GPU_dict[Dev]:
+        append = '' if args.infile is None else f' -i {args.infile}'
         print(f'Calculating: {info}')
         _ = subprocess.run(f'python calculate_single_coil_grid.py -r {reg} -C {info["coil"]}'+
-                           f' -L {info["layer"]} -D {Dev} -j {Jac} -d {dxyz} -t {Test}', shell=True,
+                           f' -L {info["layer"]} -D {Dev} -j {Jac} -d {dxyz} -t {Test}'+append, shell=True,
                            capture_output=False)
