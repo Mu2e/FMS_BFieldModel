@@ -34,6 +34,7 @@ if __name__=='__main__':
     parser.add_argument('-t', '--Testing',
                         help='Calculate using small subset of field points '+
                         '(N=10000)? "y"/"n"(default).')
+    parser.add_argument('-i', '--infile', help='pickle file with coordinate grid')
     args = parser.parse_args()
     # fill defaults if necessary
     if args.Region is None:
@@ -66,7 +67,8 @@ if __name__=='__main__':
     for i in straight_bar_GPU_dict[Dev]:
         df_cn = df_str.iloc[i]
         cn = df_cn['cond N']
+        append = '' if args.infile is None else f' -i {args.infile}'
         print(f'Calculating {i}: cond N={cn}, info={df_cn["Name/role"]}')
         _ = subprocess.run(f'python calculate_single_straight_bar_grid.py'+
-                           f' -r {reg} -C {cn} -D {Dev} -j {Jac} -d {dxyz} -t {Test}', shell=True,
+                           f' -r {reg} -C {cn} -D {Dev} -j {Jac} -d {dxyz} -t {Test}'+append, shell=True,
                            capture_output=False)

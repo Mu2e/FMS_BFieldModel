@@ -69,6 +69,15 @@ DS_cyl2d_grid_5mm = {'X0':-3.904, 'Y0':0., 'Z0':4.101,
                      'nX':161, 'nY':1, 'nZ':1881,
                      'dX':0.005, 'dY':0.005, 'dZ':0.005}
 
+# Fine-grained regular cylindrical grid -- for fit diagnostics
+DS_cyl_grid_fine = {'R0': 0,    'Phi0': 0,          'Z0' : Z0_BP,
+                    'nR': 81,   'nPhi': 16,         'nZ' : 933,
+                    'dR': 0.01, 'dPhi': 2*np.pi/16, 'dZ' : 0.01,
+                    'XOffset': -3.904}
+
+DSCartVal_grid = {'X0': -4.854, 'Y0': -0.95, 'Z0': 4.225,
+                  'nX': 77,     'nY': 77,    'nZ': 385,
+                  'dX': 0.025,  'dY': 0.025, 'dZ': 0.025}
 # integrator specific constants
 ## HELICALC / COILS
 # dxyz for helicalc (nominal values for Mu2e DS coils)
