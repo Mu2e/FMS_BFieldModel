@@ -510,7 +510,7 @@ TODO fix this -- build flexibility to handle missing measurements
 
 def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=None, save_name=None,
                                 df_fit=None, ptype='3d', aspect='square', cmin=None, cmax=None, fig=None, ax=None,
-                                do_title=True, title_simp=None, do2pi=False, units='mm',show_plot=True,df_fine=None):
+                                do_title=True, title_simp=None, do2pi=False, units='mm',show_plot=True, df_fine=None, legend=False):
 
     _modes = ['mpl_nonuni']
 
@@ -636,15 +636,24 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
             elif ptype.lower() == 'heat':
                 fig = plt.figure(constrained_layout='constrained')
             else:
-                fig = plt.figure(figsize=plt.figaspect(0.4), constrained_layout='constrained')
+                fig = plt.figure(figsize=plt.figaspect(0.4), layout='constrained')
+                #fig.set_constrained_layout_pads(hspace=0., wspace=0., w_pad=0.15)
+                #fig.set_constrained_layout_pads(hspace=0., wspace=0.15)
+                #fig.set_constrained_layout_pads(hspace=0., wspace=0.25)
 
         if df_fit:
-            ax = fig.add_subplot(1, 2, 1, projection='3d')
+            #ax = fig.add_subplot(1, 2, 1, projection='3d')
+            gs = fig.add_gridspec(1, 20)
+            i_g = 11
+            ax = fig.add_subplot(gs[0, :i_g], projection='3d')
             # fit
             ax.plot(X[mask_fit], Y[mask_fit], Z[mask_fit], 'ko', alpha=1.0, markersize=2, zorder=101)
             # not fit
-            ax.plot(X[mask_not_fit], Y[mask_not_fit], Z[mask_not_fit], 'ro', alpha=0.5, markersize=2, zorder=100)
+            ax.plot(X[mask_not_fit], Y[mask_not_fit], Z[mask_not_fit], 'ro', alpha=0.5, markersize=2, zorder=100, label='Excluded from fit')
             ax.plot_wireframe(Xi, Yi, Z_fit, color='green', zorder=99)
+            N_not = np.sum(mask_not_fit)
+            if legend and (N_not > 0):
+                ax.legend()
         elif ptype.lower() == '3d':
             if not ax:
                 ax = fig.gca(projection='3d')
@@ -690,7 +699,8 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
                 plt.clf()
 
         if df_fit:
-            ax2 = fig.add_subplot(1, 2, 2)
+            #ax2 = fig.add_subplot(1, 2, 2)
+            ax2 = fig.add_subplot(gs[0, i_g:])
             max_val = np.nanmax(dZ)
             min_val = np.nanmin(dZ)
             abs_max_val = max(abs(max_val), abs(min_val))
@@ -705,6 +715,9 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
                 plt.savefig(save_dir+'/'+save_name+'_heat.pdf')
             if not show_plot:
                 plt.clf()
+            axs = [ax, ax2]
+        else:
+            axs = [ax]
 
             # TODO turn this on/off with a flag in cfg_plot
             '''
@@ -733,6 +746,39 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
                 plt.savefig(save_dir+'/'+save_name+'_unc.pdf')
             plt.clf()
             '''
+    return fig, axs
+
+def mu2e_correlation_matrix_plot(correl_dict, clip=None, numbers=False, figsize=None,
+                                 save_dir=None, save_name=None, show_plot=True):
+    if figsize is None:
+        figsize = (25, 20)
+    fig, ax = plt.subplots(figsize=figsize)
+    if clip is None:
+        data = correl_dict['correl']
+    else:
+        data = np.clip(correl_dict['correl'], clip[0], clip[1])
+    ms = ax.matshow(data)
+    if numbers:
+        for (i, j), z in np.ndenumerate(data):
+            ax.text(j, i, '{:0.1f}'.format(z), ha='center', va='center', fontsize='xx-small', color='white')
+
+    cb = fig.colorbar(ms)
+
+    labels = correl_dict['variables']
+    plt.xticks(range(len(labels)), labels=labels, rotation=60, fontsize=10);
+    plt.yticks(range(len(labels)), labels=labels, rotation=0, fontsize=10);
+
+    # Prep save area
+    if save_dir:
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        if save_name is None:
+            save_name = 'correlation_matrix'
+        fig.savefig(save_dir+'/'+save_name+'.pdf')
+        #fig.savefig(save_dir+'/'+save_name+'.png')
+        if not show_plot:
+            plt.clf()
+
     return fig, ax
 
 def mu2e_plot3d_nonuniform_cyl(df, x, y, z, conditions=None, mode='mpl', cut_color=5, info=None, save_dir=None, save_name=None,
