@@ -83,7 +83,7 @@ from scipy.interpolate import Rbf
 import mu2e
 from mu2e.dataframeprod import DataFrameMaker
 from mu2e.fieldfitter_redux2 import FieldFitter
-from mu2e.mu2eplots import mu2e_plot3d, mu2e_plot3d_nonuniform_test, mu2e_plot3d_nonuniform_cyl
+from mu2e.mu2eplots import mu2e_plot3d, mu2e_plot3d_nonuniform_test, mu2e_plot3d_nonuniform_cyl, mu2e_correlation_matrix_plot
 from mu2e.syst_unc import laserunc, metunc, apply_field_unc
 # FIXME! It's messy and confusing that we use the same variable names to refer to
 # the named tuple instances in this code as we use to define the namedtuples in cfg_defs.
@@ -426,7 +426,7 @@ def plot_parallel_helper(step, ABC, conditions, df, cfg_plot, save_dir, aspect, 
     return fig, ax
 
 '''
-def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name, aspect='square', parallel=True, df_fine=None):
+def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name, aspect='square', parallel=True, df_fine=None, correl_dict=None):
     """Make a series of comparison plots with the fit output and hallprobe input.
 
     This function takes input DFs and `namedtuple` config files, and generates a comprehensive
@@ -471,6 +471,7 @@ def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name, aspect='square', para
     Todo:
         * Move this function to more logical module.
     """
+    print("In make_fit_plots...")
 
     geom = cfg_geom.geom
     plot_type = cfg_plot.plot_type
@@ -488,6 +489,8 @@ def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name, aspect='square', para
     elif cfg_plot.save_loc == 'html':
         save_dir = mu2e.mu2e_ext_path+'plots/html/'+name
         # save_dir = '/home/ckampa/Plots/FieldFitting/'+name
+    else:
+        save_dir = mu2e.mu2e_ext_path+f'plots/{cfg_plot.save_loc}/'+name
 
     for step in steps:
         for ABC in ABC_geom[geom]:
@@ -500,19 +503,25 @@ def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name, aspect='square', para
                 mu2e_plot3d_nonuniform_test(df, ABC[0], ABC[1], ABC[2], conditions=conditions_str,
                                             df_fit=True, mode=plot_type, save_dir=save_dir,
                                             do2pi=cfg_geom.do2pi, units='m', df_fine=df_fine,
-                                            show_plot=False)
+                                            show_plot=False, legend=True)
             else:
                 save_name = mu2e_plot3d(df, ABC[0], ABC[1], ABC[2], conditions=conditions_str,
                                         df_fit=True, mode=plot_type, save_dir=save_dir,
                                         do2pi=cfg_geom.do2pi, units='m', df_fine=df_fine)
-                
+
+    # make a correlation plot
+    if not correl_dict is None:
+        fig, ax = mu2e_correlation_matrix_plot(correl_dict, clip=None,
+                                               numbers=False, figsize=(20, 17),
+                                               show_plot=False, save_dir=save_dir)
 
     # TODO add flag to turn on / off showing plots
     #if plot_type in ['mpl', 'mpl_nonuni']:
     #    plt.show()
+    print("make_fit_plots done.")
 
 
-def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plot, profile=False, aspect='square', parallel_plots=True, iterative=False):
+def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plot, profile=False, aspect='square', parallel_plots=True, iterative=False, use_name_in_df=False):
     """Universal function to perform all types of hall probe measurements, plots, and further
     analysis.
 
@@ -616,7 +625,9 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
         ff.fit(cfg_params, cfg_pickle, iterative=iterative)
 
     saveunc = (cfg_geom.systunc is None) and not cfg_pickle.recreate and ('Unc' not in cfg_data.path)
-    iscart = (cfg_geom.geom == 'cart')
+    #iscart = (cfg_geom.geom == 'cart')
+    # FIXME! Do we need this parameter? I think we always want to evaluate Bx_fit, By_fit
+    iscart = True
     ff.merge_data_fit_res(saveunc,iscart)
     print(ff.input_data)
 
@@ -626,12 +637,28 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
         #if cfg_params.noise is not None:
         #    pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+f'_noise{cfg_params.noise.replace(".","p")}.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
         #else:
-        pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+'.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
-    elif cfg_geom.geom == 'cart': #Special case --> save 'fitted' cartesian field
-        if (cfg_pickle.load_name.endswith('Unc') or 'Rebar' in cfg_pickle.load_name) and 'pinn' not in cfg_pickle.load_name:
-            pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+f'_{cfg_pickle.load_name.split("_")[-1]}.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
+        if use_name_in_df:
+            save_name = cfg_data.path.split('.')[0]+f'_{name}.Mu2E.Fit.p'
         else:
-            pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+'.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
+            save_name = cfg_data.path.split('.')[0]+'.Mu2E.Fit.p'
+        pkl.dump(ff.input_data, open(save_name, "wb"), pkl.HIGHEST_PROTOCOL)
+    elif cfg_geom.geom == 'cart': #Special case --> save 'fitted' cartesian field
+        if use_name_in_df:
+            save_name = cfg_data.path.split('.')[0]+f'_{name}.Mu2E.Fit.p'
+        elif (cfg_pickle.load_name.endswith('Unc') or 'Rebar' in cfg_pickle.load_name) and 'pinn' not in cfg_pickle.load_name:
+            save_name = cfg_data.path.split('.')[0]+f'_{cfg_pickle.load_name.split("_")[-1]}.Mu2E.Fit.p'
+        else:
+            save_name = cfg_data.path.split('.')[0]+'.Mu2E.Fit.p'
+        pkl.dump(ff.input_data, open(save_name, "wb"), pkl.HIGHEST_PROTOCOL)
+    # need final else for situations where one fit df (cyl) recreates from another
+    else:
+        # geom == 'cyl' and recreate == 'True'
+        if use_name_in_df:
+            save_name = cfg_data.path.split('.')[0]+f'_{name}.Mu2E.Fit.p'
+        else:
+            save_name = cfg_data.path.split('.')[0]+'.Mu2E.Fit.p'
+        pkl.dump(ff.input_data, open(save_name, "wb"), pkl.HIGHEST_PROTOCOL)
+
     # FIXME! Are there any other cases to add? e.g. "cyl" with recreate will not make a file currently.
     # else:
     #     save_name = cfg_data.path.split('.')[0]+'.Mu2e.Fit_rec.p'
@@ -652,6 +679,9 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
         hall_measure_data_eval.loc[:,'Br_fit']   = fit_eval[0:len(fit_eval)//3]
         hall_measure_data_eval.loc[:,'Bz_fit']   = fit_eval[len(fit_eval)//3:2*len(fit_eval)//3]
         hall_measure_data_eval.loc[:,'Bphi_fit'] = fit_eval[2*len(fit_eval)//3:]
+        if iscart:
+            hall_measure_data_eval.eval('Bx_fit = Br_fit*cos(Phi)-Bphi_fit*sin(Phi)', inplace=True)
+            hall_measure_data_eval.eval('By_fit = Br_fit*sin(Phi)+Bphi_fit*cos(Phi)', inplace=True)
         plot_data = hall_measure_data_eval
 
         # If fit uncertainties were saved in main fit, compute also for fine grid
@@ -662,14 +692,19 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
             hall_measure_data_eval.loc[:,'Br_unc']   = fit_unc[0:len(fit_unc)//3]
             hall_measure_data_eval.loc[:,'Bz_unc']   = fit_unc[len(fit_unc)//3:2*len(fit_unc)//3]
             hall_measure_data_eval.loc[:,'Bphi_unc'] = fit_unc[2*len(fit_unc)//3:]
-            if cfg_params.noise is not None:
-                # #NOMINAL CASE:
-                # pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+'.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
-                save_file = cfg_data.path.split('.')[0] + f'_noise{cfg_params.noise}_eval' + '.Mu2E.Fit.p'
-                pkl.dump(hall_measure_data_eval, open(save_file, "wb"), pkl.HIGHEST_PROTOCOL)
+            # if cfg_params.noise is not None:
+            #     # #NOMINAL CASE:
+            #     # pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+'.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
+            #     save_file = cfg_data.path.split('.')[0] + f'_noise{cfg_params.noise}_eval' + '.Mu2E.Fit.p'
+            #     pkl.dump(hall_measure_data_eval, open(save_file, "wb"), pkl.HIGHEST_PROTOCOL)
+            # else:
+            #    save_file = cfg_data.path.split('.')[0] + f'_eval' + '.Mu2E.Fit.p'
+            #    pkl.dump(hall_measure_data_eval, open(save_file, "wb"), pkl.HIGHEST_PROTOCOL)
+            if use_name_in_df:
+                save_name = cfg_data.path.split('.')[0]+f'_{name}_eval.Mu2E.Fit.p'
             else:
-                save_file = cfg_data.path.split('.')[0] + f'_eval' + '.Mu2E.Fit.p'
-                pkl.dump(hall_measure_data_eval, open(save_file, "wb"), pkl.HIGHEST_PROTOCOL)
+                save_name = cfg_data.path.split('.')[0] +  f'_eval.Mu2E.Fit.p'
+            pkl.dump(hall_measure_data_eval, open(save_name, "wb"), pkl.HIGHEST_PROTOCOL)
 
         # 'Fit' to nominal with syst. params
         elif cfg_pickle.load_name.endswith('Unc') and cfg_pickle.recreate:
@@ -685,7 +720,10 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
 
         # In all other cases, name of DSCylFine fit should match DSCylFine map?
         else:
-            save_name = cfg_data.paht.split('.')[0]+f"_eval.Mu2E.Fit.p"
+            if use_name_in_df:
+                save_name = cfg_data.path.split('.')[0]+f'_{name}_eval.Mu2E.Fit.p'
+            else:
+                save_name = cfg_data.path.split('.')[0] +  f'_eval.Mu2E.Fit.p'
             pkl.dump(hall_measure_data_eval, open(save_name, "wb"), pkl.HIGHEST_PROTOCOL)
 
     else:
@@ -738,7 +776,12 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
     else:
         df_fine = None
     if cfg_plot.plot_type != 'none':
-        make_fit_plots(plot_data, cfg_data, cfg_geom, cfg_plot, name, aspect=aspect, parallel=parallel_plots, df_fine=df_fine)
+        # need to check if correlation dict was created
+        if hasattr(ff, 'correl_dict'):
+            correl_dict = ff.correl_dict
+        else:
+            correl_dict = None
+        make_fit_plots(plot_data, cfg_data, cfg_geom, cfg_plot, name, aspect=aspect, parallel=parallel_plots, df_fine=df_fine, correl_dict=correl_dict)
         
     return hall_measure_data, ff
 

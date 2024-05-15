@@ -3,6 +3,7 @@ from time import time
 from datetime import datetime
 import argparse
 import numpy as np
+import pandas as pd
 from helicalc import helicalc_dir, helicalc_data
 from helicalc.solcalc import *
 from helicalc.geometry import read_solenoid_geom_combined
@@ -21,6 +22,8 @@ from helicalc.constants import (
     DS_cyl2d_grid_5mm,
     DS_FMS_cyl_grid,
     DS_FMS_cyl_grid_SP,
+    DS_cyl_grid_fine,
+    DSCartVal_grid
 )
 
 # paramdir = '/home/ckampa/coding/helicalc/dev/params/'
@@ -34,7 +37,9 @@ regions = {'PS': PS_grid, 'TSu': TSu_grid, 'TSd': TSd_grid, 'DS': DS_grid,
            'ProtonDumpArea': ProtonDumpArea_grid,
            'DSCyl2D': DS_cyl2d_grid_5mm,
            'DSCylFMS': DS_FMS_cyl_grid,
-           'DSCylFMSAll': [DS_FMS_cyl_grid, DS_FMS_cyl_grid_SP]}
+           'DSCylFMSAll': [DS_FMS_cyl_grid, DS_FMS_cyl_grid_SP],
+           'DSCylFine': DS_cyl_grid_fine,
+           'DSCartVal': DSCartVal_grid}
 
 if __name__=='__main__':
     # parse command line arguments
@@ -42,7 +47,7 @@ if __name__=='__main__':
     parser.add_argument('-r', '--Region',
                         help='Which region of Mu2e to calculate? '+
                         '["PS"(default), "TSu", "TSd", "DS", "PStoDumpArea"'+
-                        ', "ProtonDumpArea", "DSCyl2D", "DSCylFMS", "DSCylFMSAll"]')
+                        ', "ProtonDumpArea", "DSCyl2D", "DSCylFMS", "DSCylFMSAll", "DSCylFine"]')
     parser.add_argument('-j', '--Jacobian',
                         help='Include points for calculating '+
                         'the Jacobian of the field? "n"(default)/"y"')
@@ -52,6 +57,7 @@ if __name__=='__main__':
     parser.add_argument('-t', '--Testing',
                         help='Calculate using small subset of coils?'+
                         '"y"(default)/"n"')
+    parser.add_argument('-i', '--infile', help='pickle file with coordinate grid')
     parser.add_argument('-u', '--Unused',
                         help='Unused argument.')
     args = parser.parse_args()
@@ -90,8 +96,14 @@ if __name__=='__main__':
     # step size for integrator
     drz = np.array([5e-3, 1e-2])
     # create grid
-    if reg in ['DSCylFMS', 'DSCylFMSAll']:
+    if reg in ['DSCylFMS', 'DSCylFMSAll', 'DSCylFine']:
         df = generate_cylindrical_grid_df(regions[reg], dec_round=9)
+    elif 'Unc' in reg:
+        if args.infile is None:
+            print("For Unc type region, provide pickle with shifted measurement grid")
+            exit()
+        df = pd.read_pickle(args.infile)
+        df = df[['X','Y','Z','HP']]
     else:
         df = generate_cartesian_grid_df(regions[reg])
     # add extra points for Jacobian?

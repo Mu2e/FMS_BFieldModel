@@ -381,9 +381,11 @@ class FieldFitter:
         end_time = time()
         print(("Elapsed time was %g seconds" % (end_time - start_time)))
         report_fit(self.result, show_correl=False)
-        if cfg_pickle.save_pickle and not cfg_pickle.recreate:
+        if cfg_pickle.save_pickle:
             self.pickle_results(self.pickle_path+cfg_pickle.save_name)
-            self.pickle_correl(self.pickle_path+cfg_pickle.save_name)
+            # can only save the correlations when we aren't recreating
+            if not cfg_pickle.recreate:
+                self.pickle_correl(self.pickle_path+cfg_pickle.save_name)
 
     def fit_external(self, cfg_params, cfg_pickle, profile=False):
         raise NotImplementedError('Oh no! you got lazy during refactoring')
@@ -427,6 +429,7 @@ class FieldFitter:
         """Combine the fit results and the input data into one dataframe for easier
         comparison of results.
         """
+        print('In FieldFitter.merge_data_fit_res...')
         bf = self.result.best_fit
 
         self.input_data.loc[:, 'Br_fit'] = bf[0:len(bf)//3]
@@ -440,10 +443,12 @@ class FieldFitter:
         
         # Only save uncertainty for true nominal fit
         if saveunc :
+            print('Evaluating uncertainties...')
             unc = self.result.eval_uncertainty(self.params)
             self.input_data.loc[:, 'Br_unc'] = unc[0:len(unc)//3]
             self.input_data.loc[:, 'Bz_unc'] = unc[len(unc)//3:2*len(unc)//3]
             self.input_data.loc[:, 'Bphi_unc'] = unc[2*len(unc)//3:]
+        print('FieldFitter.merge_data_fit_res done.')
 
     def set_nan_stderr_non_vary(self):
         # Note this function should only be run after a fit. Before the fit,
