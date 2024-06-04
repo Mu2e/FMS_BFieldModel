@@ -4,13 +4,14 @@
 source $CONDA_PREFIX/etc/profile.d/conda.sh
 conda activate helicalc
 
-logdir=helicalc_data+"Bmaps/helicalc_partial/logs/"
+helicalc_data=$(python ../../get_data_dir.py)
+logdir="${helicalc_data}/Bmaps/helicalc_partial/logs/"
 
 # region="DS"
 # region="TSd"
 # region="DSCylFMS"
-region="DSCylFMSAll"
-# region="DSCartVal"
+#region="DSCylFMSAll"
+region="DSCartVal"
 # region="DSCylFMSAll_MetUnc"
 # itoy=$1
 

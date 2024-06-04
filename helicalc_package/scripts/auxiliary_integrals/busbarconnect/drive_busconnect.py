@@ -1,31 +1,34 @@
 import subprocess
 import argparse
-from math import ceil
-from helicalc.constants import dxyz_arc_bar_dict, TSd_grid, DS_grid
+import numpy as np
 from helicalc.solenoid_geom_funcs import load_all_geoms
 
 # load straight bus bars, dump all other geometries
 paramname = 'Mu2e_V13'
 version = paramname.replace('Mu2e_V', '')
 df_dict = load_all_geoms(version=version, return_dict=True)
-df_arc = df_dict['arcs']
-df_arc_transfer = df_dict['arcs_transfer']
-N_cond = len(df_arc) + len(df_arc_transfer)
-# last GPU will get any extra conductors
-N_cond_per_GPU = ceil(N_cond / 4)
+df_busbarconnect = df_dict['busbarconnect']
+# FIXME! This line is leftover from radial current (2 per coil). Clean this up.
+#unique_coils = np.unique([s.strip('out').strip('in') for s
+#                         in df_busbarconnect['cond N'].values])
+unique_coils = df_busbarconnect['cond N'].values
+N_cond = len(unique_coils)
+# last GPU will get fewer conductors
+# we have 11 scripts to run, so this split is more sensible (3, 3, 3, 2)
+N_cond_per_GPU = int(N_cond // 4) + 1
 
 # evenly split, with remaining bars to GPU 3
-arc_bar_GPU_dict = {0: range(0, N_cond_per_GPU),
-                    1: range(N_cond_per_GPU, 2*N_cond_per_GPU),
-                    2: range(2*N_cond_per_GPU, 3*N_cond_per_GPU),
-                    3: range(3*N_cond_per_GPU, N_cond)}
+busconnect_GPU_dict = {0: range(0, N_cond_per_GPU),
+                       1: range(N_cond_per_GPU, 2*N_cond_per_GPU),
+                       2: range(2*N_cond_per_GPU, 3*N_cond_per_GPU),
+                       3: range(3*N_cond_per_GPU, N_cond)}
 
 if __name__=='__main__':
     # parse command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', '--Region',
                         help='Which region of Mu2e to calculate? '+
-                        '["DS"(default), "TSd", "DSCylFMS", "DSCylFMSAll"]')
+                        '["DS"(default), "TSd", "DSCylFMS", "DSCylFMSAll", "DSCylFine", "DSCartVal"]')
     parser.add_argument('-D', '--Device',
                         help='Which GPU (i.e. which coils/layers) to use? '+
                         '[0 (default), 1, 2, 3].')
@@ -38,7 +41,6 @@ if __name__=='__main__':
     parser.add_argument('-t', '--Testing',
                         help='Calculate using small subset of field points '+
                         '(N=10000)? "y"/"n"(default).')
-    parser.add_argument('-i', '--infile', help='pickle file with coordinate grid')
     args = parser.parse_args()
     # fill defaults if necessary
     if args.Region is None:
@@ -68,14 +70,9 @@ if __name__=='__main__':
     Test = args.Testing
 
     print(f'Running on GPU: {Dev}')
-    for i in arc_bar_GPU_dict[Dev]:
-        if i < len(df_arc):
-            df_cn = df_arc.iloc[i]
-        else:
-            df_cn = df_arc_transfer.iloc[i-len(df_arc)]
-        cn = df_cn['cond N']
-        append = '' if args.infile is None else f' -i {args.infile}'
-        print(f'Calculating {i}: cond N={cn}, info={df_cn["Name/role"]}')
-        _ = subprocess.run(f'python calculate_single_arc_bar_grid.py'+
-                           f' -r {reg} -C {cn} -D {Dev} -j {Jac} -d {dxyz} -t {Test}'+append, shell=True,
-                           capture_output=False)
+    for i in busconnect_GPU_dict[Dev]:
+        cn = unique_coils[i]
+        print(f'Calculating {i}: Coil_Num={cn}')
+        _ = subprocess.run(f'python calculate_single_busbarconnect_grid.py'+
+                           f' -r {reg} -C {cn} -D {Dev} -j {Jac} -d {dxyz} -t {Test}',
+                           shell=True, capture_output=False)

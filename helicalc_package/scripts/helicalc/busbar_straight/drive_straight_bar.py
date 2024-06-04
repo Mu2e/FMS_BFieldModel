@@ -4,7 +4,9 @@ from helicalc.constants import dxyz_straight_bar_dict, TSd_grid, DS_grid
 from helicalc.solenoid_geom_funcs import load_all_geoms
 
 # load straight bus bars, dump all other geometries
-df_dict = load_all_geoms(return_dict=True)
+paramname = 'Mu2e_V13'
+version = paramname.replace('Mu2e_V', '')
+df_dict = load_all_geoms(version=version, return_dict=True)
 df_str = df_dict['straights']
 N_cond = len(df_str)
 # last GPU will get any extra conductors
