@@ -6,9 +6,9 @@ import pandas as pd
 import argparse
 from tqdm import tqdm
 from helicalc import helicalc_dir, helicalc_data
-from helicalc.auxiliary_integrators import RadialStraightIntegrator1D
+from helicalc.busbar import ArcIntegrator3D
 from helicalc.tools import generate_cartesian_grid_df, generate_cylindrical_grid_df, add_points_for_J
-from helicalc.constants import dr_radial_dict, TSd_grid, DS_grid, DS_FMS_cyl_grid, DS_FMS_cyl_grid_SP, DS_cyl_grid_fine, DSCartVal_grid
+from helicalc.constants import dxyz_arc_bar_dict, TSd_grid, DS_grid, DS_FMS_cyl_grid, DS_FMS_cyl_grid_SP, DS_cyl_grid_fine, DSCartVal_grid
 from helicalc.solenoid_geom_funcs import load_all_geoms
 
 # data
@@ -18,11 +18,11 @@ datadir = helicalc_data+'Bmaps/auxiliary_partial/'
 paramname = 'Mu2e_V13'
 version = paramname.replace('Mu2e_V', '')
 df_dict = load_all_geoms(version=version, return_dict=True)
-df_radial_coils = df_dict['radial_coils']
+df_busbarconnect = df_dict['busbarconnect']
 
 # assume same chunk size for everything, for now
-# N_per_chunk = 10000 # original, from busbars
-N_per_chunk = 8000
+N_per_chunk = 10000 # original, from busbars
+#N_per_chunk = 8000
 
 regions = {'TSd': TSd_grid, 'DS': DS_grid, 'DSCylFMS': DS_FMS_cyl_grid,
            'DSCylFMSAll': [DS_FMS_cyl_grid, DS_FMS_cyl_grid_SP], 'DSCylFine': DS_cyl_grid_fine, 'DSCartVal': DSCartVal_grid}
@@ -36,9 +36,6 @@ if __name__=='__main__':
     parser.add_argument('-C', '--Coil',
                         help='Coil number [56(default), 57, 58, ... , 66]. '+
                         'This is supported only for DS coils.')
-    parser.add_argument('-R', '--Reverse',
-                        help='Reverse "I_flow" for radial bars? '+
-                        '"y"/"n"(default). Useful e.g. for bus bars.')
     parser.add_argument('-D', '--Device',
                         help='Which GPU to use? [0 (default), 1, 2, 3].')
     parser.add_argument('-j', '--Jacobian',
@@ -61,22 +58,19 @@ if __name__=='__main__':
         args.Coil = "56"
     else:
         args.Coil = args.Coil.strip()
-    if args.Reverse is None:
-        args.Reverse = False
+    df_cond = df_busbarconnect.query(f'`cond N`=={args.Coil}').iloc[0]
+    # kludge to add "_buscon" to "cond N"
+    df_cond['cond N'] = str(df_cond['cond N'])+'_buscon'
+
+    R = df_cond.R0
+    # pick correct integration grid based on which SC cross section
+    if df_cond['T'] < 7e-3:
+        ind_dxyz = 2
     else:
-        args.Reverse = args.Reverse.strip() == 'y'
-    df_conds = df_radial_coils[np.isin(df_radial_coils,
-                                       [f'{args.Coil}in', f'{args.Coil}out'])\
-                               ].copy()
-    # reverse if necessary
-    if args.Reverse:
-        df_conds.loc[:, 'I_flow'] = -1 * df_conds.loc[:, 'I_flow']
-        rev_str = '_reversed'
-    else:
-        rev_str = ''
-    # pick correct integration grid based on ???
-    ind_dr = 1
-    dr_ = dr_radial_dict[ind_dr]
+        ind_dxyz = 1
+    # grab integration grid and adjust for R
+    dxyz = dxyz_arc_bar_dict[ind_dxyz]
+    dxyz[2] = dxyz[2] / R
     if args.Device is None:
         args.Device = 0
     else:
@@ -101,7 +95,7 @@ if __name__=='__main__':
     # redirect stdout to log file
     dt = datetime.strftime(datetime.now(), '%Y-%m-%d_%H%M%S')
     log_file = open(datadir+f"logs/{dt}_calculate_{reg}_"+
-                    f"region_radial_coil{rev_str}.log", "w")
+                    f"region_busconnect.log", "w")
     old_stdout = sys.stdout
     sys.stdout = log_file
     # find correct chunk size
@@ -122,17 +116,15 @@ if __name__=='__main__':
     # set up base directory/name
     if args.Testing:
         base_name = f'Bmaps/auxiliary_partial/tests/{paramname}.{reg}_region.'+\
-                     f'test-radial_coil{suff}.'
+                     f'test-helicalc{suff}.'
     else:
         base_name = f'Bmaps/auxiliary_partial/{paramname}.{reg}_region.'+\
-                     f'standard-radial_coil{suff}.'
+                     f'standard-helicalc{suff}.'
     # initialize conductor
-    for i in range(len(df_conds)):
-        df_cond = df_conds.iloc[i]
-        myRadial = RadialStraightIntegrator1D(df_cond, dr=dr_, dev=args.Device)
-        # integrate!
-        df = myRadial.integrate_grid(df, N_batch=N_calc, tqdm=tqdm)
+    myArc = ArcIntegrator3D(df_cond, dxyz=dxyz, dev=args.Device)
+    # integrate!
+    myArc.integrate_grid(df, N_batch=N_calc, tqdm=tqdm)
     # save!
-    myRadial.save_grid_calc(savetype='pkl', savename=base_name+
-                            f'Coil_Num_{args.Coil}_radial{rev_str}',
-                            all_cols=True)
+    myArc.save_grid_calc(savetype='pkl', savename=base_name+
+                         f'coil_{args.Coil}_buscon',
+                         all_cols=False)

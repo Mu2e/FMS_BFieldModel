@@ -96,7 +96,13 @@ def add_points_for_J(df, dxyz=0.001):
     xs = np.concatenate(np.array([x0s, x0s, x0s, x0s, x0s, x0s + dxyz, x0s - dxyz]).T)
     ys = np.concatenate(np.array([y0s, y0s, y0s, y0s + dxyz, y0s - dxyz, y0s, y0s]).T)
     zs = np.concatenate(np.array([z0s, z0s + dxyz, z0s - dxyz, z0s, z0s, z0s, z0s]).T)
-    df = pd.DataFrame({'X': xs, 'Y': ys, 'Z': zs})
+    # add HP, if exists
+    if 'HP' in df.columns:
+        hp_vals = df.HP.values
+        hps = np.concatenate(np.array(7*[hp_vals]).T)
+        df = pd.DataFrame({'X': xs, 'Y': ys, 'Z': zs, 'HP': hps})
+    else:
+        df = pd.DataFrame({'X': xs, 'Y': ys, 'Z': zs})
     return df
 
 # calculate cable length of all coils in a solenoid

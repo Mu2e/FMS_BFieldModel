@@ -4,7 +4,8 @@
 source $CONDA_PREFIX/etc/profile.d/conda.sh
 conda activate helicalc
 
-logdir=helicalc_data+"Bmaps/helicalc_partial/logs/"
+helicalc_data=$(python ../../get_data_dir.py)
+logdir="${helicalc_data}/Bmaps/helicalc_partial/logs/"
 
 # region="DS"
 # region="TSd"
@@ -21,16 +22,16 @@ time=$(date +"%Y-%m-%d_%H%M%S")
 
 # run on each GPU, putting process in background
 # no jacobian
-# python drive_straight_bar.py -r ${region} -D 0 -t ${test} > ${logdir}${time}_GPU0_calculations_${region}_straight_bar.log &
-# python drive_straight_bar.py -r ${region} -D 1 -t ${test} > ${logdir}${time}_GPU1_calculations_${region}_straight_bar.log &
-# python drive_straight_bar.py -r ${region} -D 2 -t ${test} > ${logdir}${time}_GPU2_calculations_${region}_straight_bar.log &
-# python drive_straight_bar.py -r ${region} -D 3 -t ${test} > ${logdir}${time}_GPU3_calculations_${region}_straight_bar.log &
+python drive_straight_bar.py -r ${region} -D 0 -t ${test} > ${logdir}${time}_GPU0_calculations_${region}_straight_bar.log &
+python drive_straight_bar.py -r ${region} -D 1 -t ${test} > ${logdir}${time}_GPU1_calculations_${region}_straight_bar.log &
+python drive_straight_bar.py -r ${region} -D 2 -t ${test} > ${logdir}${time}_GPU2_calculations_${region}_straight_bar.log &
+python drive_straight_bar.py -r ${region} -D 3 -t ${test} > ${logdir}${time}_GPU3_calculations_${region}_straight_bar.log &
 
 # with jacobian
-python drive_straight_bar.py -r ${region} -D 0 -j y -d 0.001 -t ${test} > ${logdir}${time}_GPU0_calculations_${region}_straight_bar.log &
-python drive_straight_bar.py -r ${region} -D 1 -j y -d 0.001 -t ${test} > ${logdir}${time}_GPU1_calculations_${region}_straight_bar.log &
-python drive_straight_bar.py -r ${region} -D 2 -j y -d 0.001 -t ${test} > ${logdir}${time}_GPU2_calculations_${region}_straight_bar.log &
-python drive_straight_bar.py -r ${region} -D 3 -j y -d 0.001 -t ${test} > ${logdir}${time}_GPU3_calculations_${region}_straight_bar.log &
+# python drive_straight_bar.py -r ${region} -D 0 -j y -d 0.001 -t ${test} > ${logdir}${time}_GPU0_calculations_${region}_straight_bar.log &
+# python drive_straight_bar.py -r ${region} -D 1 -j y -d 0.001 -t ${test} > ${logdir}${time}_GPU1_calculations_${region}_straight_bar.log &
+# python drive_straight_bar.py -r ${region} -D 2 -j y -d 0.001 -t ${test} > ${logdir}${time}_GPU2_calculations_${region}_straight_bar.log &
+# python drive_straight_bar.py -r ${region} -D 3 -j y -d 0.001 -t ${test} > ${logdir}${time}_GPU3_calculations_${region}_straight_bar.log &
 
 # MetUnc
 # python drive_straight_bar.py -r ${region}${itoy} -D 0 -t ${test} -i /home/sdittmer/Mu2E/mu2e/coord_metunc_${itoy}.p > ${logdir}${time}_GPU0_calculations_${region}${itoy}_straight_bar.log &

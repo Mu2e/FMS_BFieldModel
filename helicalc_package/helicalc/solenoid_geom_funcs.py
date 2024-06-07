@@ -14,6 +14,8 @@ def load_all_geoms(version=14, return_dict=True):
     straight_file = geom_dir + f'Mu2e_Straight_Bars_V{version}.csv'
     arc_file = geom_dir + f'Mu2e_Arc_Bars_V{version}.csv'
     arc_transfer_file = geom_dir + f'Mu2e_Arc_Transfer_Bars_V{version}.csv'
+    busbarconnect_file = geom_dir+f'Mu2e_V{version}_busconnect.txt'
+    coilconnect_file = geom_dir+f'Mu2e_V{version}_coilconnect.txt'
     # load dataframes
     #df_coils = pd.read_pickle(coils_file)
     # read coils and add which solenoid system each coil is in
@@ -35,6 +37,8 @@ def load_all_geoms(version=14, return_dict=True):
     df_str = pd.read_csv(straight_file)
     df_arc = pd.read_csv(arc_file)
     df_arc_tr = pd.read_csv(arc_transfer_file)
+    df_busbarconnect = pd.read_csv(busbarconnect_file)
+    df_coilconnect = pd.read_csv(coilconnect_file)
     # radial currents
     df_DS_coils = df_coils.query('Solenoid == "DS"')
     df_radial_coils = make_radial_dataframe(df_DS_coils, length=20.,
@@ -43,11 +47,13 @@ def load_all_geoms(version=14, return_dict=True):
         df_dict = {'coils': df_coils, 'interlayers': df_interlayer,
                    'straights': df_str, 'arcs': df_arc,
                    'arcs_transfer': df_arc_tr,
+                   'busbarconnect': df_busbarconnect,
+                   'coilconnect': df_coilconnect,
                    'radial_coils': df_radial_coils}
         return df_dict
     else:
         return df_coils, df_interlayer, df_str, df_arc, df_arc_tr,\
-         df_radial_coils
+         df_busbarconnect, df_coilconnect, df_radial_coils
 
 # creating other relevant dictionaries
 def make_conductor_dicts(df_dict):
@@ -58,6 +64,8 @@ def make_conductor_dicts(df_dict):
                      'straights': gen_straight_allsurface_points,
                      'arcs': gen_arc_allsurface_points,
                      'arcs_transfer': gen_arc_allsurface_points,
+                     'busbarconnect': gen_arc_allsurface_points,
+                     'coilconnect': gen_arc_allsurface_points,
                      'radial_coils': get_1d_radial}
     # make a lookup dictionary for which condctor type corresponds to each
     # conductor number
@@ -83,6 +91,10 @@ def make_conductor_dicts(df_dict):
                 # v is e.g. "56in" or "56out"
                 conductor_dict[v] = key
                 id_column_dict[v] = 'Coil_Num'
+        elif key in ['busbarconnect', 'coilconnect']:
+            for v in df['cond N'].values:
+                conductor_dict[str(v)+'_buscon'] = key
+                id_column_dict[str(v)+'_buscon'] = 'cond N'
         else:
             raise ValueError(f'Geometry key "{key}" not recognized.')
 
@@ -217,9 +229,12 @@ def get_many_1d_radials(df, nr=3):
 
 # Coils (idea cylinders)
 def cylinder(r, h, xc=0, yc=0, zc=0, pitch=0., yaw=0., roll=0.,
-             nt=100, nv=50, flip_angles=False):
+             nt=100, nv=50, flip_angles=False, theta_from_origin=False):
     # generate grid of theta, z (or v for vertical)
-    theta = np.linspace(2*np.pi+np.pi/4, 0+np.pi/4, nt)
+    if theta_from_origin:
+        theta = np.linspace(0, 2*np.pi, nt)
+    else:
+        theta = np.linspace(2*np.pi+np.pi/4, 0+np.pi/4, nt)
     v = np.linspace(-h/2, h/2, nv)
     # make 2D grid for plotting later on
     TH, VV = np.meshgrid(theta, v)
@@ -247,7 +262,7 @@ def cylinder(r, h, xc=0, yc=0, zc=0, pitch=0., yaw=0., roll=0.,
 
 def get_cylinder_inner_surface_xyz(df, coil_num):
     c = df.query(f'Coil_Num == {coil_num}').iloc[0]
-    x, y, z = cylinder(c.Ro, c.L, xc=c.x, yc=c.y, zc=c.z,
+    x, y, z = cylinder(c.Ri, c.L, xc=c.x, yc=c.y, zc=c.z,
                        pitch=c.rot0, yaw=c.rot1, roll=c.rot2,
                        nt=360, nv=3, flip_angles=False)
     return x,y,z

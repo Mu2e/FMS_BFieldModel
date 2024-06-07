@@ -5,7 +5,9 @@ from helicalc.constants import dr_radial_dict
 from helicalc.solenoid_geom_funcs import load_all_geoms
 
 # load straight bus bars, dump all other geometries
-df_dict = load_all_geoms(return_dict=True)
+paramname = 'Mu2e_V13'
+version = paramname.replace('Mu2e_V', '')
+df_dict = load_all_geoms(version=version, return_dict=True)
 df_radial_coils = df_dict['radial_coils']
 unique_coils = np.unique([s.strip('out').strip('in') for s
                          in df_radial_coils.Coil_Num.values])
@@ -29,6 +31,12 @@ if __name__=='__main__':
     parser.add_argument('-D', '--Device',
                         help='Which GPU (i.e. which coils/layers) to use? '+
                         '[0 (default), 1, 2, 3].')
+    parser.add_argument('-j', '--Jacobian',
+                        help='Include points for calculating '+
+                        'the Jacobian of the field? "n"(default)/"y"')
+    parser.add_argument('-d', '--dxyz_Jacobian',
+                        help='What step size (in m) to use for points used in '+
+                        'the Jacobian calculation? e.g. "0.001" (default)')
     parser.add_argument('-R', '--Reverse',
                         help='Reverse "I_flow" for radial bars? '+
                         '"y"/"n"(default). Useful e.g. for bus bars.')
@@ -52,6 +60,16 @@ if __name__=='__main__':
     else:
         args.Device = int(args.Device.strip())
     Dev = args.Device
+    if args.Jacobian is None:
+        args.Jacobian = 'n'
+    else:
+        args.Jacobian = args.Jacobian.strip()
+    Jac = args.Jacobian
+    if args.dxyz_Jacobian is None:
+        args.dxyz_Jacobian = '0.001'
+    else:
+        args.dxyz_Jacobian = args.dxyz_Jacobian.strip()
+    dxyz = args.dxyz_Jacobian
     if args.Testing is None:
         args.Testing = 'n'
     else:
@@ -63,5 +81,5 @@ if __name__=='__main__':
         cn = unique_coils[i]
         print(f'Calculating {i}: Coil_Num={cn}')
         _ = subprocess.run(f'python calculate_single_radial_coil_grid.py'+
-                           f' -r {reg} -C {cn} -D {Dev} -R {Rev} -t {Test}',
+                           f' -r {reg} -C {cn} -R {Rev} -D {Dev} -j {Jac} -d {dxyz} -t {Test}',
                            shell=True, capture_output=False)
