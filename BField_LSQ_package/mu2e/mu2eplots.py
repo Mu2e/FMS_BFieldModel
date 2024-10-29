@@ -653,7 +653,7 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
             ax.plot_wireframe(Xi, Yi, Z_fit, color='green', zorder=99)
             N_not = np.sum(mask_not_fit)
             if legend and (N_not > 0):
-                ax.legend()
+                ax.legend(loc='upper right')
         elif ptype.lower() == '3d':
             if not ax:
                 ax = fig.gca(projection='3d')
@@ -684,7 +684,8 @@ def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=N
             cb.set_label(z+' (G)', fontsize=18)
         if do_title:
             if title_simp:
-                plt.title(title_simp)
+                #plt.title(title_simp)
+                plt.title(title_simp, fontsize=20)
             elif info is not None:
                 plt.title(f'{info} {z} vs {x} and {y} for DS\n{conditions_title}',
                           fontsize=20)

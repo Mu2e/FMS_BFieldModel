@@ -212,7 +212,7 @@ class DataFrameMaker(object):
             raise KeyError("'Mau' or 'GA' not found in field_map_version: "+self.field_map_version)
 
     def do_basic_modifications(self, offset=None, helix=False, pitch=None, reverse=False,
-                               descale=False):
+                               descale=False, enforcePhiVals=True):
         """Perform the expected modifications to the input, needed for further analysis.
 
         Modify the field map to add more columns, offset the X axis so it is re-centered to 0,
@@ -291,25 +291,28 @@ class DataFrameMaker(object):
             # If running on an idealized DSCylFMSAll grid, will have multiple copies of the R=0 point,
             # one for each phi step. However phi information gets lost when propagating through helicalc.
             # Need to add back phi information, before computing Bphi / Br
-            phi_vals = np.unique(np.array(self.data_frame.Phi).round(decimals=6))
-            if len(phi_vals) != 16:
-                print(phi_vals)
-                exit()
-            z_steps_r0 = np.unique(self.data_frame[self.data_frame.R==0.]['Z'])
-            updated = 0
-            for z_step in z_steps_r0:
-                # More than one row with R=0 for given Z
-                if self.data_frame[(self.data_frame.R==0.) & (self.data_frame.Z==z_step)].shape[0] > 1:
-                    # These are duplicates if Phi is ~same between rows (within machine precision)
-                    if np.var(self.data_frame[(self.data_frame.R==0.) & (self.data_frame.Z==z_step)]['Phi']) < 1e-10:
-                        # Check # duplicates actually equals nPhiSteps
-                        if self.data_frame[(self.data_frame.R==0.) & (self.data_frame.Z==z_step)].shape[0] == len(phi_vals):
-                            self.data_frame.loc[(self.data_frame.R==0.) & (self.data_frame.Z==z_step),'Phi'] = phi_vals
-                            updated += 1
-                        else:
-                            print(f"Cannot fill Phi for R==0, Z=={z_step} -- {self.data_frame[(self.data_frame.R==0.) & (self.data_frame.Z==z_step)].shape[0]} lines but {len(phi_vals)} phi values")
-            if updated != 0:
-                print(f'Updated phi values at R=0 for {updated} z steps ({len(z_steps_r0)} z steps total)')
+            if enforcePhiVals:
+                phi_vals = np.unique(np.array(self.data_frame.Phi).round(decimals=6))
+                if len(phi_vals) != 16:
+                    print(len(phi_vals), phi_vals)
+                    print(f'Number of phi values ({len(phi_vals)}) does not match expectation of 16. Exiting now.')
+                    exit()
+                z_steps_r0 = np.unique(self.data_frame[self.data_frame.R==0.]['Z'])
+                updated = 0
+                for z_step in z_steps_r0:
+                    # More than one row with R=0 for given Z
+                    if self.data_frame[(self.data_frame.R==0.) & (self.data_frame.Z==z_step)].shape[0] > 1:
+                        # These are duplicates if Phi is ~same between rows (within machine precision)
+                        if np.var(self.data_frame[(self.data_frame.R==0.) & (self.data_frame.Z==z_step)]['Phi']) < 1e-10:
+                            # Check # duplicates actually equals nPhiSteps
+                            if self.data_frame[(self.data_frame.R==0.) & (self.data_frame.Z==z_step)].shape[0] == len(phi_vals):
+                                self.data_frame.loc[(self.data_frame.R==0.) & (self.data_frame.Z==z_step),'Phi'] = phi_vals
+                                updated += 1
+                            else:
+                                print(f"Cannot fill Phi for R==0, Z=={z_step} -- {self.data_frame[(self.data_frame.R==0.) & (self.data_frame.Z==z_step)].shape[0]} lines but {len(phi_vals)} phi values")
+                print(f'# updated = {updated}')
+                if updated != 0:
+                    print(f'Updated phi values at R=0 for {updated} z steps ({len(z_steps_r0)} z steps total)')
 
             self.data_frame.eval('Bphi = -Bx*sin(Phi)+By*cos(Phi)', inplace=True)
             self.data_frame.eval('Br = Bx*cos(Phi)+By*sin(Phi)', inplace=True)
